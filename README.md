@@ -1,5 +1,9 @@
 # 🧭 Fairness Diagnostic  Kit (FDK™)
 
+[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-blue.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+[![GitHub Repository](https://img.shields.io/badge/GitHub-AI--Fairness--com%2FFDK--Toolkit-lightgrey?logo=github)](https://github.com/AI-Fairness-com/FDK-Toolkit)
+
+
 **Open-source toolkit for fairness diagnostics across seven key AI domains.**  
 Developed to support the *Fairness Diagnostic Kit (FDK™)* framework described in the book  
 **_The Fairness Diagnostic Kit: Tools for Auditing, Education, and Governance of Responsible AI_** (Tavakoli, 2025).
