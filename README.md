@@ -34,5 +34,36 @@ FDK™ currently supports seven domains, each with its own validated fairness me
 
 ## ⚙️ Repository Structure
 
+Each domain folder includes: 
+## 🧩 Repository Structure
 Each domain folder includes:
+- Python pipeline (.py)
+- HTML interface (.html)
+- Example synthetic dataset (.csv)
+- Human-readable summary (.txt)
+- JSON output (.json)
+
+---
+
+## 📚 Citation and Credits
+If you use or reference this toolkit in your research, please cite:
+
+**Tavakoli, H.** (2025). *The Fairness Diagnostic Kit (FDK™): Tools for Auditing, Education, and Governance of Responsible AI.* London: Apress.
+
+**Repository:** [AI-Fairness-com/FDK-Toolkit](https://github.com/AI-Fairness-com/FDK-Toolkit)  
+**Correspondence:** [info@ai-fairness.com](mailto:info@ai-fairness.com)
+
+---
+
+### 📖 BibTeX
+```bibtex
+@book{Tavakoli2025FDK,
+  author    = {Hamid Tavakoli},
+  title     = {The Fairness Diagnostic Kit (FDK™): Tools for Auditing, Education, and Governance of Responsible AI},
+  year      = {2025},
+  publisher = {Apress},
+  address   = {London},
+  url       = {https://github.com/AI-Fairness-com/FDK-Toolkit}
+}
+
 
