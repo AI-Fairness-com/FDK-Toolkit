@@ -1,4 +1,4 @@
-# 🧭 Fairness Development Kit (FDK™)
+# 🧭 Fairness Diagnostic  Kit (FDK™)
 
 **Open-source toolkit for fairness diagnostics across seven key AI domains.**  
 Developed to support the *Fairness Diagnostic Kit (FDK™)* framework described in the book  
