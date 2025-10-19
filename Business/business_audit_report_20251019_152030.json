@@ -1,0 +1,119 @@
+{
+  "domain": "business",
+  "metrics_calculated": 36,
+  "metric_categories": {
+    "core_group_fairness": [
+      "statistical_parity_difference",
+      "selection_rates",
+      "disparate_impact_ratio",
+      "average_predicted_positive_difference",
+      "mean_difference",
+      "base_rate"
+    ],
+    "performance_error_fairness": [
+      "true_positive_rate_difference",
+      "true_negative_rate_difference",
+      "false_positive_rate_difference",
+      "false_negative_rate_difference",
+      "error_rate_difference",
+      "balanced_accuracy",
+      "false_discovery_rate_difference",
+      "false_omission_rate_difference"
+    ],
+    "customer_segmentation_subgroup_fairness": [
+      "error_disparity_by_subgroup",
+      "worst_group_accuracy",
+      "subgroup_performance_variance"
+    ],
+    "predictive_causal_reliability": [
+      "individual_fairness_consistency",
+      "counterfactual_fairness_score"
+    ],
+    "data_preprocessing_integrity": [
+      "data_quality_bias_indicators",
+      "preprocessing_bias_impact"
+    ],
+    "explainability_feature_influence": [
+      "feature_influence_parity",
+      "model_explainability_fairness"
+    ],
+    "causal_counterfactual_fairness": [
+      "causal_discrimination_score",
+      "treatment_equality"
+    ],
+    "temporal_operational_fairness": [
+      "temporal_fairness_consistency",
+      "operational_bias_drift"
+    ],
+    "additional_business_metrics": [
+      "equal_opportunity_difference",
+      "predictive_equality_difference",
+      "overall_accuracy_equality",
+      "conditional_use_accuracy_equality",
+      "fairness_through_awareness",
+      "group_benefit_parity",
+      "customer_lifetime_value_fairness",
+      "revenue_allocation_fairness"
+    ]
+  },
+  "fairness_metrics": {
+    "statistical_parity_difference": 0.41234955520669814,
+    "selection_rates": {
+      "Platinum_North": 0.9251700680272109,
+      "Platinum_West": 0.8924050632911392,
+      "Bronze_South": 0.5128205128205128,
+      "Silver_South": 0.6457142857142857,
+      "Silver_East": 0.72,
+      "Platinum_South": 0.8848484848484849,
+      "Gold_East": 0.7310344827586207,
+      "Silver_North": 0.6934306569343066,
+      "Bronze_West": 0.64,
+      "Bronze_East": 0.5804195804195804,
+      "Platinum_East": 0.8783783783783784,
+      "Bronze_North": 0.6506024096385542,
+      "Silver_West": 0.6770186335403726,
+      "Gold_South": 0.65625,
+      "Gold_North": 0.7666666666666667,
+      "Gold_West": 0.6585365853658537
+    },
+    "disparate_impact_ratio": 0.5542986425339366,
+    "average_predicted_positive_difference": 0.41234955520669814,
+    "mean_difference": 0.34222919937205654,
+    "base_rate": 0.74,
+    "true_positive_rate_difference": 0.4088384639796889,
+    "true_negative_rate_difference": 0.484375,
+    "false_positive_rate_difference": 0.484375,
+    "false_negative_rate_difference": 0.408838463979689,
+    "error_rate_difference": 0.37462537462537465,
+    "balanced_accuracy": 0.5043415351578189,
+    "false_discovery_rate_difference": 0.3389705882352941,
+    "false_omission_rate_difference": 0.4078947368421053,
+    "error_disparity_by_subgroup": 0.37462537462537465,
+    "worst_group_accuracy": 0.4825174825174825,
+    "subgroup_performance_variance": 0.013968204892794659,
+    "individual_fairness_consistency": 0.85,
+    "counterfactual_fairness_score": 0.78,
+    "data_quality_bias_indicators": 0.0,
+    "preprocessing_bias_impact": 0.0,
+    "feature_influence_parity": 0.89936,
+    "model_explainability_fairness": 0.8,
+    "causal_discrimination_score": 0.0,
+    "treatment_equality": 1.0,
+    "temporal_fairness_consistency": 0.95,
+    "operational_bias_drift": 0.03,
+    "equal_opportunity_difference": 0.4088384639796889,
+    "predictive_equality_difference": 0.0,
+    "overall_accuracy_equality": 0.3746253746253746,
+    "conditional_use_accuracy_equality": 0.2997002997002997,
+    "fairness_through_awareness": 1.0,
+    "group_benefit_parity": 1.0,
+    "customer_lifetime_value_fairness": 0.88,
+    "revenue_allocation_fairness": 0.92,
+    "composite_bias_score": 0.42535461641743805
+  },
+  "summary": {
+    "composite_bias_score": 0.42535461641743805,
+    "overall_assessment": "HIGH_BIAS - Significant customer equity concerns"
+  },
+  "timestamp": "2025-10-19 15:20:30.746178"
+}
