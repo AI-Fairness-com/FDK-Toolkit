@@ -1,0 +1,575 @@
+{
+  "groups": [
+    "Low",
+    "Middle",
+    "High"
+  ],
+  "group_stats": {
+    "Low": {
+      "n": 278,
+      "prevalence": 0.2589928057553957,
+      "mean_pred": 0.0,
+      "ece": 0.07714110856288628,
+      "counts": {
+        "tp": 0,
+        "tn": 206,
+        "fp": 0,
+        "fn": 72
+      },
+      "performance": {
+        "TPR": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ]
+        },
+        "TNR": {
+          "value": 1.0,
+          "ci": [
+            1.0,
+            1.0
+          ]
+        },
+        "FPR": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ]
+        },
+        "FNR": {
+          "value": 1.0,
+          "ci": [
+            1.0,
+            1.0
+          ]
+        },
+        "PPV": {
+          "value": null,
+          "ci": [
+            null,
+            null
+          ]
+        },
+        "NPV": {
+          "value": 0.7410071942446043,
+          "ci": [
+            0.6856828377467757,
+            0.7891373061381163
+          ]
+        },
+        "FDR": {
+          "value": null,
+          "ci": [
+            null,
+            null
+          ]
+        },
+        "FOR": {
+          "value": 0.2589928057553957,
+          "ci": [
+            0.20749594497002594,
+            0.31048966654076543
+          ]
+        },
+        "Accuracy": {
+          "value": 0.7410071942446043,
+          "ci": [
+            0.6856828377467757,
+            0.7891373061381163
+          ]
+        },
+        "BalancedAccuracy": {
+          "value": 0.5,
+          "ci": [
+            null,
+            null
+          ]
+        }
+      }
+    },
+    "Middle": {
+      "n": 387,
+      "prevalence": 0.4599483204134367,
+      "mean_pred": 0.4599483204134367,
+      "ece": 0.07562915694259402,
+      "counts": {
+        "tp": 178,
+        "tn": 209,
+        "fp": 0,
+        "fn": 0
+      },
+      "performance": {
+        "TPR": {
+          "value": 1.0,
+          "ci": [
+            1.0,
+            1.0
+          ]
+        },
+        "TNR": {
+          "value": 1.0,
+          "ci": [
+            1.0,
+            1.0
+          ]
+        },
+        "FPR": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ]
+        },
+        "FNR": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ]
+        },
+        "PPV": {
+          "value": 1.0,
+          "ci": [
+            1.0,
+            1.0
+          ]
+        },
+        "NPV": {
+          "value": 1.0,
+          "ci": [
+            1.0,
+            1.0
+          ]
+        },
+        "FDR": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ]
+        },
+        "FOR": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ]
+        },
+        "Accuracy": {
+          "value": 1.0,
+          "ci": [
+            1.0,
+            1.0
+          ]
+        },
+        "BalancedAccuracy": {
+          "value": 1.0,
+          "ci": [
+            null,
+            null
+          ]
+        }
+      }
+    },
+    "High": {
+      "n": 85,
+      "prevalence": 0.5176470588235295,
+      "mean_pred": 0.5176470588235295,
+      "ece": 0.060681717828288774,
+      "counts": {
+        "tp": 44,
+        "tn": 41,
+        "fp": 0,
+        "fn": 0
+      },
+      "performance": {
+        "TPR": {
+          "value": 1.0,
+          "ci": [
+            1.0,
+            1.0
+          ]
+        },
+        "TNR": {
+          "value": 1.0,
+          "ci": [
+            1.0,
+            1.0
+          ]
+        },
+        "FPR": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ]
+        },
+        "FNR": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ]
+        },
+        "PPV": {
+          "value": 1.0,
+          "ci": [
+            1.0,
+            1.0
+          ]
+        },
+        "NPV": {
+          "value": 1.0,
+          "ci": [
+            1.0,
+            1.0
+          ]
+        },
+        "FDR": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ]
+        },
+        "FOR": {
+          "value": 0.0,
+          "ci": [
+            0.0,
+            0.0
+          ]
+        },
+        "Accuracy": {
+          "value": 1.0,
+          "ci": [
+            1.0,
+            1.0
+          ]
+        },
+        "BalancedAccuracy": {
+          "value": 1.0,
+          "ci": [
+            null,
+            null
+          ]
+        }
+      }
+    }
+  },
+  "performance": {
+    "auc": 0.9998955722639933
+  },
+  "column_mapping": {
+    "group": "group",
+    "y_true": "y_true",
+    "y_pred": "y_pred",
+    "y_prob": "y_prob"
+  },
+  "original_columns": [
+    "depression_score",
+    "anxiety_score",
+    "daily_sleep",
+    "group",
+    "y_true",
+    "y_pred",
+    "y_prob"
+  ],
+  "calibration_gap": {
+    "by_group": {
+      "Low": 0.2589928057553957,
+      "Middle": 0.0,
+      "High": 0.0
+    },
+    "ece_by_group": {
+      "Low": 0.07714110856288628,
+      "Middle": 0.07562915694259402,
+      "High": 0.060681717828288774
+    },
+    "calib_ci_by_group": {
+      "Low": [
+        0.20749594497002594,
+        0.31048966654076543
+      ],
+      "Middle": [
+        0.41029311444161043,
+        0.509603526385263
+      ],
+      "High": [
+        0.41141931219235506,
+        0.6238748054547039
+      ]
+    }
+  },
+  "performance_gaps": {
+    "TPR": {
+      "range": 1.0,
+      "ratio": null
+    },
+    "TNR": {
+      "range": 0.0,
+      "ratio": 1.0
+    },
+    "FPR": {
+      "range": 0.0,
+      "ratio": null
+    },
+    "FNR": {
+      "range": 1.0,
+      "ratio": null
+    },
+    "PPV": {
+      "range": 0.0,
+      "ratio": 1.0
+    },
+    "NPV": {
+      "range": 0.25899280575539574,
+      "ratio": 1.3495145631067962
+    },
+    "FDR": {
+      "range": 0.0,
+      "ratio": null
+    },
+    "FOR": {
+      "range": 0.2589928057553957,
+      "ratio": null
+    },
+    "Accuracy": {
+      "range": 0.25899280575539574,
+      "ratio": 1.3495145631067962
+    },
+    "BalancedAccuracy": {
+      "range": 0.5,
+      "ratio": 2.0
+    }
+  },
+  "fairness": {
+    "selection_rate": {
+      "Low": 0.0,
+      "Middle": 0.4599483204134367,
+      "High": 0.5176470588235295
+    },
+    "SPD": {
+      "by_group": {
+        "Low": -0.5176470588235295,
+        "Middle": -0.057698738410092765,
+        "High": 0.0
+      },
+      "reference": "High"
+    },
+    "base_rate": {
+      "Low": 0.2589928057553957,
+      "Middle": 0.4599483204134367,
+      "High": 0.5176470588235295
+    },
+    "equal_opportunity_diff": {
+      "by_group": {
+        "Low": -1.0,
+        "Middle": 0.0,
+        "High": 0.0
+      },
+      "reference": "Middle"
+    }
+  },
+  "comprehensive_performance": {
+    "performance_matrix": {
+      "Low": {
+        "TPR": 0.0,
+        "TNR": 1.0,
+        "FPR": 0.0,
+        "FNR": 1.0,
+        "PPV": null,
+        "NPV": 0.7410071942446043,
+        "FDR": null,
+        "FOR": 0.2589928057553957,
+        "Accuracy": 0.7410071942446043,
+        "BalancedAccuracy": 0.5
+      },
+      "Middle": {
+        "TPR": 1.0,
+        "TNR": 1.0,
+        "FPR": 0.0,
+        "FNR": 0.0,
+        "PPV": 1.0,
+        "NPV": 1.0,
+        "FDR": 0.0,
+        "FOR": 0.0,
+        "Accuracy": 1.0,
+        "BalancedAccuracy": 1.0
+      },
+      "High": {
+        "TPR": 1.0,
+        "TNR": 1.0,
+        "FPR": 0.0,
+        "FNR": 0.0,
+        "PPV": 1.0,
+        "NPV": 1.0,
+        "FDR": 0.0,
+        "FOR": 0.0,
+        "Accuracy": 1.0,
+        "BalancedAccuracy": 1.0
+      }
+    },
+    "differences": {
+      "TPR": {
+        "Low": -1.0,
+        "Middle": 0.0,
+        "High": 0.0
+      },
+      "TNR": {
+        "Low": 0.0,
+        "Middle": 0.0,
+        "High": 0.0
+      },
+      "FPR": {
+        "Low": 0.0,
+        "Middle": 0.0,
+        "High": 0.0
+      },
+      "FNR": {
+        "Low": 1.0,
+        "Middle": 0.0,
+        "High": 0.0
+      },
+      "PPV": {
+        "Low": null,
+        "Middle": 0.0,
+        "High": 0.0
+      },
+      "NPV": {
+        "Low": -0.25899280575539574,
+        "Middle": 0.0,
+        "High": 0.0
+      },
+      "FDR": {
+        "Low": null,
+        "Middle": 0.0,
+        "High": 0.0
+      },
+      "FOR": {
+        "Low": 0.2589928057553957,
+        "Middle": 0.0,
+        "High": 0.0
+      },
+      "Accuracy": {
+        "Low": -0.25899280575539574,
+        "Middle": 0.0,
+        "High": 0.0
+      },
+      "BalancedAccuracy": {
+        "Low": -0.5,
+        "Middle": 0.0,
+        "High": 0.0
+      }
+    },
+    "ratios": {
+      "TPR": {
+        "Low": 0.0,
+        "Middle": 1.0,
+        "High": 1.0
+      },
+      "TNR": {
+        "Low": 1.0,
+        "Middle": 1.0,
+        "High": 1.0
+      },
+      "FPR": {
+        "Low": null,
+        "Middle": null,
+        "High": null
+      },
+      "FNR": {
+        "Low": null,
+        "Middle": null,
+        "High": null
+      },
+      "PPV": {
+        "Low": null,
+        "Middle": 1.0,
+        "High": 1.0
+      },
+      "NPV": {
+        "Low": 0.7410071942446043,
+        "Middle": 1.0,
+        "High": 1.0
+      },
+      "FDR": {
+        "Low": null,
+        "Middle": null,
+        "High": null
+      },
+      "FOR": {
+        "Low": null,
+        "Middle": null,
+        "High": null
+      },
+      "Accuracy": {
+        "Low": 0.7410071942446043,
+        "Middle": 1.0,
+        "High": 1.0
+      },
+      "BalancedAccuracy": {
+        "Low": 0.5,
+        "Middle": 1.0,
+        "High": 1.0
+      }
+    },
+    "reference_group": "Middle",
+    "metric_summary": {
+      "range": 0.25899280575539574,
+      "ratio": 1.3495145631067962
+    }
+  },
+  "error_analysis": {
+    "error_rates_by_group": {
+      "Low": 0.25899280575539574,
+      "Middle": 0.0,
+      "High": 0.0
+    },
+    "disparity": {
+      "range": 0.25899280575539574,
+      "ratio": null
+    },
+    "worst_group": [
+      "Middle",
+      1.0
+    ]
+  },
+  "subgroup_analysis": {
+    "problematic_subgroups": {
+      "base_error_rate": 0.09599999999999997,
+      "total_samples": 750,
+      "top_problematic_subgroups": [
+        {
+          "subgroup_description": "group=Low",
+          "subgroup_size": 278,
+          "subgroup_error_rate": 0.25899280575539574,
+          "base_error_rate": 0.09599999999999997,
+          "error_ratio": 2.6978417266187065,
+          "support": 0.37066666666666664,
+          "mdss_score": 0.917261755048742
+        }
+      ],
+      "subgroup_count": 1
+    },
+    "worst_group_analysis": {
+      "worst_groups_by_metric": {},
+      "overall_worst_group": null,
+      "overall_severity_score": null,
+      "recommendation": "No clear worst group identified"
+    }
+  },
+  "summary": {
+    "composite_bias_score": 0.2294964028776979,
+    "component_scores": {
+      "performance_gaps": 0.31474820143884896,
+      "calibration_gaps": 0.2589928057553957,
+      "subgroup_analysis": 0.0,
+      "error_disparity": 0.25899280575539574
+    },
+    "interpretation": "Composite bias score: 0.229",
+    "severity_level": "MEDIUM"
+  },
+  "human_summary": "=== COMPREHENSIVE FAIRNESS AUDIT REPORT ===\nGroups analyzed: ['Low', 'Middle', 'High']\nTotal samples: 750\nOverall AUC: 1.000\nTPR disparity range: 1.000\nAccuracy disparity range: 0.259\nComposite Bias Score: 0.229 (Medium bias)\n\n=== KEY RECOMMENDATIONS ===\n\u26a0\ufe0f  MEDIUM PRIORITY: Moderate fairness concerns\n   - Monitor performance disparities\n   - Consider targeted improvements"
+}
