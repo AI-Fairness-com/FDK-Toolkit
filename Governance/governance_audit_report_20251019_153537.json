@@ -1,0 +1,101 @@
+{
+  "domain": "governance",
+  "metrics_calculated": 27,
+  "metric_categories": {
+    "core_group_fairness": [
+      "statistical_parity_difference",
+      "disparate_impact_ratio",
+      "equal_opportunity_difference",
+      "average_odds_difference",
+      "fnr_by_group",
+      "fpr_by_group",
+      "fdr_parity",
+      "for_parity",
+      "error_rate_balance",
+      "overall_accuracy_equality"
+    ],
+    "individual_conditional_fairness": [
+      "conditional_demographic_disparity",
+      "counterfactual_fairness",
+      "individual_fairness_distance",
+      "causal_fairness",
+      "subgroup_fairness_metric"
+    ],
+    "calibration_reliability": [
+      "calibration_by_group",
+      "brier_score_by_group",
+      "expected_calibration_error",
+      "maximum_calibration_error"
+    ],
+    "data_integrity_representation": [
+      "representation_parity_index",
+      "sampling_balance_ratio",
+      "missingness_bias_index",
+      "data_coverage_gap"
+    ],
+    "explainability_accountability": [
+      "shap_summary",
+      "permutation_feature_importance",
+      "transparency_index",
+      "fairness_correlation_index"
+    ]
+  },
+  "fairness_metrics": {
+    "statistical_parity_difference": 0.25362428269405013,
+    "selection_rates": {
+      "Low": 0.4772727272727273,
+      "Upper_Middle": 0.7304964539007093,
+      "Lower_Middle": 0.598705501618123,
+      "High": 0.7308970099667774
+    },
+    "disparate_impact_ratio": 0.6529958677685951,
+    "equal_opportunity_difference": 0.25959849774391397,
+    "average_odds_difference": 0.22344433280481069,
+    "fnr_by_group": {
+      "Low": 0.4970414201183432,
+      "Upper_Middle": 0.2374429223744292,
+      "Lower_Middle": 0.3333333333333333,
+      "High": 0.24481327800829875
+    },
+    "fpr_by_group": {
+      "Low": 0.4460431654676259,
+      "Upper_Middle": 0.6190476190476191,
+      "Lower_Middle": 0.5111111111111111,
+      "High": 0.6333333333333333
+    },
+    "fdr_parity": 0.2490414347557205,
+    "for_parity": 0.26065312624452414,
+    "error_rate_balance": 0.15176683781334943,
+    "overall_accuracy_equality": 0.15176683781334943,
+    "conditional_demographic_disparity": 0.25362428269405013,
+    "counterfactual_fairness": 0.25362428269405013,
+    "individual_fairness_distance": 0.09635380874415911,
+    "causal_fairness": 0.055723502392699104,
+    "subgroup_fairness_metric": 0.15176683781334943,
+    "calibration_by_group": {
+      "Low": 0.4358810742134558,
+      "Upper_Middle": 0.3047754462717464,
+      "Lower_Middle": 0.4265979975170993,
+      "High": 0.30249657807764674
+    },
+    "brier_score_by_group": {
+      "Low": 0.22110756121933406,
+      "Upper_Middle": 0.14925658389584787,
+      "Lower_Middle": 0.2215874580024449,
+      "High": 0.1467649393017202
+    },
+    "expected_calibration_error": 0.36743777401998706,
+    "maximum_calibration_error": 0.4358810742134558,
+    "representation_parity_index": 0.97,
+    "sampling_balance_ratio": 0.912621359223301,
+    "data_coverage_gap": 0.007500000000000007,
+    "transparency_index": 0.9359784532711505,
+    "fairness_correlation_index": 0.8508402436733957,
+    "composite_bias_score": 0.1931095482590499
+  },
+  "summary": {
+    "composite_bias_score": 0.1931095482590499,
+    "overall_assessment": "HIGH_BIAS - Significant equity concerns in policy decisions"
+  },
+  "timestamp": "2025-10-19 15:35:37.790757"
+}
