@@ -1,0 +1,69 @@
+{
+  "domain": "justice",
+  "metrics_calculated": 14,
+  "metric_categories": {
+    "core_group_fairness": [
+      "disparate_impact",
+      "statistical_parity_difference",
+      "base_rate"
+    ],
+    "calibration_reliability": [
+      "calibration_gap",
+      "regression_parity",
+      "slice_auc_difference"
+    ],
+    "error_prediction_fairness": [
+      "fpr_fnr_differences",
+      "fdr_for_differences",
+      "predictive_parity_difference"
+    ],
+    "statistical_inequality": [
+      "coefficient_of_variation"
+    ],
+    "subgroup_bias_detection": [
+      "error_rate_difference"
+    ],
+    "causal_fairness": [
+      "causal_effect_difference"
+    ],
+    "robustness_fairness": [
+      "worst_group_accuracy",
+      "composite_bias_score"
+    ],
+    "explainability_temporal": [
+      "shap_disparity"
+    ]
+  },
+  "fairness_metrics": {
+    "statistical_parity_difference": 0.08213158924993669,
+    "selection_rates": {
+      "Black": 0.3746556473829201,
+      "White": 0.35139442231075696,
+      "Hispanic": 0.43352601156069365
+    },
+    "base_rate_difference": 0.021736014904695955,
+    "base_rates": {
+      "Black": 0.3443526170798898,
+      "White": 0.35139442231075696,
+      "Hispanic": 0.36608863198458574
+    },
+    "fpr_difference": 0.10638297872340426,
+    "fnr_difference": 0.0,
+    "fdr_difference": 0.15555555555555556,
+    "for_difference": 0.0,
+    "predictive_parity_difference": 0.07777777777777778,
+    "coefficient_of_variation": 0.08942387897269291,
+    "normalized_mean_difference": 0.21248693529731372,
+    "error_rate_difference": 0.06743737957610785,
+    "error_rate_ratio": Infinity,
+    "causal_effect_difference": 0.08213158924993669,
+    "worst_group_accuracy": 0.9325626204238922,
+    "composite_bias_score": 0.06743737957610785,
+    "shap_disparity": 0
+  },
+  "summary": {
+    "composite_bias_score": 0.06743737957610785,
+    "overall_assessment": "MEDIUM_BIAS - Moderate fairness concerns detected"
+  },
+  "timestamp": "2025-10-19T15:44:20.049186"
+}
