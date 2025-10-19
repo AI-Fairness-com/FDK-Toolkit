@@ -1,0 +1,71 @@
+{
+  "domain": "finance",
+  "metrics_calculated": 14,
+  "metric_categories": {
+    "core_group_fairness": [
+      "disparate_impact",
+      "statistical_parity_difference",
+      "base_rate"
+    ],
+    "calibration_reliability": [
+      "calibration_gap",
+      "regression_parity",
+      "slice_auc_difference"
+    ],
+    "error_prediction_fairness": [
+      "fpr_fnr_differences",
+      "fdr_for_differences",
+      "predictive_parity_difference"
+    ],
+    "statistical_inequality": [
+      "coefficient_of_variation"
+    ],
+    "subgroup_bias_detection": [
+      "error_rate_difference"
+    ],
+    "causal_fairness": [
+      "causal_effect_difference"
+    ],
+    "robustness_fairness": [
+      "worst_group_accuracy",
+      "composite_bias_score"
+    ],
+    "explainability_temporal": [
+      "shap_disparity"
+    ]
+  },
+  "fairness_metrics": {
+    "statistical_parity_difference": 0.0,
+    "selection_rates": {
+      "Senior_HighIncome": 1.0,
+      "Young_LowIncome": 1.0,
+      "Middle_LowIncome": 1.0,
+      "Young_HighIncome": 1.0,
+      "Senior_LowIncome": 1.0,
+      "Middle_HighIncome": 1.0
+    },
+    "base_rate_difference": 0.0,
+    "base_rates": {
+      "Senior_HighIncome": 1.0,
+      "Young_LowIncome": 1.0,
+      "Middle_LowIncome": 1.0,
+      "Young_HighIncome": 1.0,
+      "Senior_LowIncome": 1.0,
+      "Middle_HighIncome": 1.0
+    },
+    "calibration_gap_difference": 0.0,
+    "coefficient_of_variation": 0.0,
+    "normalized_mean_difference": 0.0,
+    "error_rate_difference": 0.0,
+    "error_rate_ratio": Infinity,
+    "causal_effect_difference": 0.0,
+    "worst_group_accuracy": 1.0,
+    "composite_bias_score": 0.0,
+    "shap_disparity": 0.0
+  },
+  "summary": {
+    "composite_bias_score": 0.0,
+    "overall_assessment": "LOW_BIAS - Generally fair across groups"
+  },
+  "timestamp": "2025-10-19 15:31:42.903844"
+}
