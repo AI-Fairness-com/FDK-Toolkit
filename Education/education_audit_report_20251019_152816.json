@@ -1,0 +1,94 @@
+{
+  "domain": "education",
+  "metrics_calculated": 15,
+  "metric_categories": {
+    "core_group_fairness": [
+      "statistical_parity_difference",
+      "normalized_mean_difference"
+    ],
+    "equality_opportunity_treatment": [
+      "tpr_difference",
+      "fpr_difference",
+      "error_rate_difference"
+    ],
+    "statistical_inequality_distribution": [
+      "coefficient_of_variation"
+    ],
+    "data_integrity_preprocessing": [
+      "sample_distortion_metrics"
+    ],
+    "subgroup_bias_detection": [
+      "mdss_subgroup_score",
+      "error_disparity_subgroup"
+    ],
+    "calibration_reliability": [
+      "slice_auc_difference"
+    ],
+    "explainability_proxy_detection": [
+      "feature_attribution_bias",
+      "shap_feature_gap"
+    ],
+    "counterfactual_causal_fairness": [
+      "counterfactual_flip_rate"
+    ],
+    "robustness_worst_case_fairness": [
+      "worst_group_accuracy",
+      "composite_bias_score"
+    ],
+    "temporal_fairness": [
+      "temporal_fairness_score"
+    ]
+  },
+  "fairness_metrics": {
+    "statistical_parity_difference": 1.0,
+    "selection_rates": {
+      "2": 0.6286307053941909,
+      "1": 0.6127167630057804,
+      "3": 0.6744186046511628,
+      "4": 0.6504854368932039,
+      "0": 0.6421052631578947,
+      "6": 0.8333333333333334,
+      "5": 0.68,
+      "8": 0.0,
+      "7": 1.0
+    },
+    "base_rate_difference": 0.25116279069767444,
+    "base_rates": {
+      "2": 0.2033195020746888,
+      "1": 0.18497109826589594,
+      "3": 0.25116279069767444,
+      "4": 0.20388349514563106,
+      "0": 0.20421052631578948,
+      "6": 0.0,
+      "5": 0.08,
+      "8": 0.0,
+      "7": 0.0
+    },
+    "normalized_mean_difference": 1.5785319652722969,
+    "tpr_difference": 0.6296296296296297,
+    "fpr_difference": 0.11324390995991362,
+    "error_rate_difference": 0.16751445086705208,
+    "coefficient_of_variation": 0.39937516365961545,
+    "sample_distortion_metrics": {
+      "average_shift": 0.8457924151333073,
+      "maximum_shift": 0.8457924151333073,
+      "individual_shifts": [
+        0.8457924151333073
+      ]
+    },
+    "mdss_subgroup_score": 1.0,
+    "error_disparity_subgroup": 1.0,
+    "slice_auc_difference": 0.3299540597055196,
+    "feature_attribution_bias": 8.0,
+    "shap_feature_gap": 8.0,
+    "counterfactual_flip_rate": 1.0,
+    "worst_group_accuracy": 0.0,
+    "composite_bias_score": 0.18012639347116097,
+    "temporal_fairness_score": 0.5379651957622912
+  },
+  "summary": {
+    "composite_bias_score": 0.18012639347116097,
+    "overall_assessment": "HIGH_BIAS - Significant equity concerns in educational decisions"
+  },
+  "timestamp": "2025-10-19 15:28:16.597931"
+}
