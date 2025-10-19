@@ -1,0 +1,92 @@
+{
+  "domain": "hiring",
+  "metrics_calculated": 15,
+  "metric_categories": {
+    "core_group_fairness": [
+      "selection_rate_difference",
+      "statistical_parity_difference",
+      "normalized_mean_difference"
+    ],
+    "equality_opportunity_treatment": [
+      "equal_opportunity_difference",
+      "tpr_tnr_differences"
+    ],
+    "error_prediction_fairness": [
+      "fnr_fpr_differences",
+      "fdr_for_differences",
+      "predictive_parity_difference"
+    ],
+    "data_integrity_preprocessing": [
+      "sample_distortion_metrics"
+    ],
+    "subgroup_bias_detection": [
+      "mdss_subgroup_score",
+      "error_disparity_subgroup"
+    ],
+    "explainability_proxy_detection": [
+      "feature_attribution_bias",
+      "shap_feature_gap"
+    ],
+    "counterfactual_causal_fairness": [
+      "counterfactual_flip_rate"
+    ],
+    "robustness_temporal_fairness": [
+      "worst_group_accuracy",
+      "temporal_fairness_score",
+      "composite_bias_score"
+    ],
+    "individual_fairness_consistency": [
+      "individual_consistency_index"
+    ]
+  },
+  "fairness_metrics": {
+    "statistical_parity_difference": 0.10725025058469767,
+    "selection_rates": {
+      "HR": 0.3949843260188088,
+      "Marketing": 0.4074074074074074,
+      "Engineering": 0.39017735334242837,
+      "Product": 0.4634146341463415,
+      "Sales": 0.41225165562913907,
+      "Finance": 0.3953488372093023,
+      "Operations": 0.3561643835616438
+    },
+    "selection_rate_difference": 0.10725025058469767,
+    "base_rate_difference": 0.06664306022766331,
+    "base_rates": {
+      "HR": 0.38557993730407525,
+      "Marketing": 0.33564814814814814,
+      "Engineering": 0.3219645293315143,
+      "Product": 0.37398373983739835,
+      "Sales": 0.3791390728476821,
+      "Finance": 0.31893687707641194,
+      "Operations": 0.35342465753424657
+    },
+    "normalized_mean_difference": 0.26812562646174415,
+    "equal_opportunity_difference": 0.125,
+    "tpr_difference": 0.125,
+    "tnr_difference": 0.09305524983491087,
+    "tpr_tnr_differences": 0.10902762491745543,
+    "fpr_difference": 0.09305524983491084,
+    "fnr_difference": 0.125,
+    "fnr_fpr_differences": 0.10902762491745542,
+    "fdr_difference": 0.13425985778926958,
+    "for_difference": 0.06096354412830449,
+    "fdr_for_differences": 0.09761170095878703,
+    "predictive_parity_difference": 0.09761170095878702,
+    "mdss_subgroup_score": 0.060820097392254135,
+    "error_disparity_subgroup": 0.060820097392254135,
+    "error_rate_difference": 0.060820097392254135,
+    "counterfactual_flip_rate": 0.10725025058469767,
+    "counterfactual_consistency_index": 0.8927497494153023,
+    "worst_group_accuracy": 0.6843853820598007,
+    "temporal_fairness_score": 0.9391799026077459,
+    "composite_bias_score": 0.10306264139942672,
+    "individual_consistency_index": 0.5104744468599647,
+    "similar_applicant_parity": 0.5013402853594908
+  },
+  "summary": {
+    "composite_bias_score": 0.10306264139942672,
+    "overall_assessment": "HIGH_BIAS - Significant fairness concerns in hiring decisions"
+  },
+  "timestamp": "2025-10-19 15:41:21.998336"
+}
