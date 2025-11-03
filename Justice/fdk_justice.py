@@ -6,7 +6,7 @@ import os
 import json
 import pandas as pd
 import numpy as np
-from flask import Flask, request, render_template, session, redirect, url_for, send_from_directory
+from flask import Blueprint, request, render_template, session, redirect, url_for, send_from_directory
 from datetime import datetime, timedelta
 
 # Check if Flask-Session is installed
@@ -268,30 +268,25 @@ def build_justice_summaries(audit: dict) -> list:
     return lines
 
 # ================================================================
-# FLASK APPLICATION SETUP
+# FLASK BLUEPRINT SETUP
 # ================================================================
 
-app = Flask(__name__)
-app.secret_key = 'justice_fairness_audit_2024'
+justice_bp = Blueprint('justice', __name__, template_folder='templates')
 
-# Session configuration for persistence
-app.config['SESSION_TYPE'] = 'filesystem'
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
-app.config['SESSION_FILE_THRESHOLD'] = 100
-
-Session(app)
+# Session configuration will be handled by main app
+# Secret key will be set by main app
 
 # ================================================================
 # JUSTICE ROUTES DEFINITION
 # ================================================================
 
-@app.route('/justice-upload')
+@justice_bp.route('/justice-upload')
 def justice_upload_page():
     """Justice dataset upload page - clears previous session"""
     session.clear()
     return render_template('upload_justice.html')
 
-@app.route('/justice-audit', methods=['POST'])
+@justice_bp.route('/justice-audit', methods=['POST'])
 def start_justice_audit_process():
     """
     Process justice dataset upload and perform auto-detection.
@@ -355,7 +350,7 @@ def start_justice_audit_process():
         return render_template("result_justice.html", title="Error", 
                               message=f"Error reading dataset: {str(e)}", summary=None)
 
-@app.route('/justice-run-audit')
+@justice_bp.route('/justice-run-audit')
 def run_justice_audit_with_mapping():
     """
     Execute justice fairness audit using detected column mappings.
@@ -430,7 +425,7 @@ def run_justice_audit_with_mapping():
         return render_template("result_justice.html", title="Justice Audit Failed",
                               message=error_msg, summary=None)
 
-@app.route('/download-justice-report/<filename>')
+@justice_bp.route('/download-justice-report/<filename>')
 def download_justice_report(filename):
     """
     Serve justice audit reports for download.
@@ -446,22 +441,13 @@ def download_justice_report(filename):
     except FileNotFoundError:
         return "File not found", 404
 
-@app.route('/')
+@justice_bp.route('/')
 def index():
     """Home page - redirect to justice upload interface"""
-    return redirect(url_for('justice_upload_page'))
+    return redirect(url_for('justice.justice_upload_page'))
 
 # ================================================================
-# APPLICATION STARTUP
+# BLUEPRINT EXPORT
 # ================================================================
 
-if __name__ == '__main__':
-    print("⚖️  Starting Justice FairDiagApp...")
-    print("📊 Session persistence: ENABLED")
-    print("🤖 Justice Auto-detection: ENABLED")
-    print("👥 Legal & Public Summaries: ENABLED")
-    print("🎯 18 Justice Fairness Metrics: ENABLED")
-    print("📁 Separate Justice Folders: ENABLED")
-    print("🌐 Justice Server running at: http://localhost:5002")
-    port = int(os.environ.get("PORT", 5002))
-    app.run(host='0.0.0.0', port=port, debug=True)
+# justice_bp is now ready to be imported by main app.py
