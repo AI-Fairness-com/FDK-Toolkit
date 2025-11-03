@@ -1,7 +1,0 @@
-{
-  "functions": {
-    "api/justice/index.py": {
-      "runtime": "vercel-python@0.5.2"
-    }
-  }
-}
