@@ -1,6 +1,6 @@
-from http.server import BaseHTTPRequestHandler
-import json
-
-def handler(request, response):
-    response.send(json.dumps({"message": "Justice API is working!"}))
-    return
+def handler(event, context):
+    return {
+        "statusCode": 200,
+        "headers": {"Content-Type": "application/json"},
+        "body": '{"message": "Justice API is working!"}'
+    }
