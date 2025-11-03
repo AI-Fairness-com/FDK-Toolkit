@@ -1,47 +1,14 @@
 name: Justice Fairness API
-
-on: 
-  workflow_dispatch:
-    inputs:
-      csv_data:
-        description: 'CSV file content (base64 encoded)'
-        required: true
-        type: string
+on: [workflow_dispatch, repository_dispatch]
 
 jobs:
-  justice-audit:
+  run-justice-audit:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-    
-    - name: Setup environment
-      run: |
-        cd Justice
-        pip install pandas numpy scikit-learn
-    
-    - name: Process input
-      run: |
-        cd Justice
-        echo "${{ github.event.inputs.csv_data }}" | base64 --decode > input.csv
-        
-    - name: Execute audit
-      run: |
-        cd Justice
-        python -c "
-import pandas as pd
-import sys
-sys.path.append('.')
-from fdk_justice_pipeline import run_pipeline
-
-df = pd.read_csv('input.csv')
-results = run_pipeline(df, save_to_disk=False)
-
-# Output results in machine-readable format
-print('AUDIT_RESULTS_START')
-print(f'COMPOSITE_SCORE:{results[\"summary\"][\"composite_bias_score\"]}')
-print(f'ASSESSMENT:{results[\"summary\"][\"professional_assessment\"]}')
-print('AUDIT_RESULTS_END')
-        "
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - run: pip install pandas numpy scikit-learn
+      - name: Run Justice Audit
+        run: cd Justice && python fdk_justice_pipeline.py
