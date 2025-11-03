@@ -8,17 +8,13 @@ on:
         required: true
         type: string
       filename:
-        description: 'Original filename'
+        description: 'Original filename' 
         required: true
         type: string
 
 jobs:
   run-justice-audit:
     runs-on: ubuntu-latest
-    outputs:
-      human_report: ${{ steps.run-audit.outputs.human_report }}
-      json_report: ${{ steps.run-audit.outputs.json_report }}
-      audit_status: ${{ steps.run-audit.outputs.audit_status }}
     
     steps:
     - uses: actions/checkout@v4
@@ -29,72 +25,66 @@ jobs:
     
     - name: Install dependencies
       run: |
-        pip install pandas numpy scikit-learn flask requests
+        cd Justice
+        pip install pandas numpy scikit-learn
     
     - name: Decode and save CSV input
       run: |
         cd Justice
         echo "${{ github.event.inputs.csv_data }}" | base64 --decode > user_upload.csv
-        echo "CSV file saved with $(wc -l < user_upload.csv) lines"
+        echo "✅ CSV file saved with $(wc -l < user_upload.csv) lines"
     
     - name: Run Justice Fairness Audit
-      id: run-audit
       run: |
         cd Justice
         python -c "
-        import pandas as pd
-        import numpy as np
-        import json
-        import base64
-        import sys
-        sys.path.append('.')
-        
-        try:
-            # Read uploaded CSV
-            df = pd.read_csv('user_upload.csv')
-            print(f'Dataset loaded: {df.shape}')
-            
-            # Import and run pipeline
-            from fdk_justice_pipeline import run_pipeline
-            results = run_pipeline(df, save_to_disk=False)
-            
-            # Generate human-readable report
-            human_report = f'''
-            ⚖️ JUSTICE FAIRNESS AUDIT COMPLETE
-            
-            Dataset: ${{ github.event.inputs.filename }}
-            Timestamp: {results['timestamp']}
-            
-            OVERALL ASSESSMENT:
-            • Composite Bias Score: {results['summary']['composite_bias_score']:.3f}
-            • Professional: {results['summary']['professional_assessment']}
-            • Public: {results['summary']['public_assessment']}
-            • Legal Risk: {results['summary']['legal_risk_level']}
-            
-            KEY METRICS:
-            • Statistical Parity: {results['fairness_metrics'].get('statistical_parity_difference', 0):.3f}
-            • FPR Difference: {results['fairness_metrics'].get('fpr_difference', 0):.3f}
-            • Equal Opportunity: {results['fairness_metrics'].get('equal_opportunity_difference', 0):.3f}
-            
-            RECOMMENDED ACTION:
-            {results['summary']['required_action']}
-            '''
-            
-            # Output results for PHP consumption
-            print('::set-output name=human_report::' + base64.b64encode(human_report.encode()).decode())
-            print('::set-output name=json_report::' + base64.b64encode(json.dumps(results).encode()).decode())
-            print('::set-output name=audit_status::success')
-            
-        except Exception as e:
-            error_msg = f'Justice audit failed: {str(e)}'
-            print('::set-output name=human_report::' + base64.b64encode(error_msg.encode()).decode())
-            print('::set-output name=json_report::{}')
-            print('::set-output name=audit_status::error')
+import pandas as pd
+import numpy as np
+import json
+import base64
+import sys
+
+try:
+    # Read uploaded CSV
+    df = pd.read_csv('user_upload.csv')
+    print(f'✅ Dataset loaded: {df.shape}')
+    
+    # Check required columns
+    required = ['group', 'y_true', 'y_pred']
+    missing = [col for col in required if col not in df.columns]
+    if missing:
+        print(f'❌ Missing columns: {missing}')
+        sys.exit(1)
+    
+    print('✅ All required columns present')
+    print(f'Groups found: {df[\\\"group\\\"].unique().tolist()}')
+    
+    # Import and run pipeline
+    sys.path.append('.')
+    from fdk_justice_pipeline import run_pipeline
+    
+    results = run_pipeline(df, save_to_disk=False)
+    
+    print('🎯 JUSTICE AUDIT COMPLETE')
+    print(f'Composite Bias Score: {results[\\\"summary\\\"][\\\"composite_bias_score\\\"]:.3f}')
+    print(f'Assessment: {results[\\\"summary\\\"][\\\"professional_assessment\\\"]}')
+    
+    # Save results
+    with open('audit_results.json', 'w') as f:
+        json.dump(results, f, indent=2)
+    
+    print('✅ Results saved to audit_results.json')
+    
+except Exception as e:
+    print(f'❌ Audit failed: {str(e)}')
+    sys.exit(1)
         "
     
-    - name: Upload Audit Results
+    - name: Upload Results
       uses: actions/upload-artifact@v4
       with:
         name: justice-audit-results
-        path: Justice/user_upload.csv
+        path: |
+          Justice/user_upload.csv
+          Justice/audit_results.json
         retention-days: 1
