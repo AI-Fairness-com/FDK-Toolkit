@@ -11,4 +11,4 @@ jobs:
           python-version: '3.9'
       - run: pip install pandas numpy scikit-learn
       - name: Run Justice Audit
-        run: python Justice/fdk_justice_pipeline.py
+        run: cd Justice && python fdk_justice_pipeline.py
