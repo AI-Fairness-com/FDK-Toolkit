@@ -1,17 +1,26 @@
 # main/app.py
 from flask import Flask, redirect
-from Justice.fdk_justice import app as justice_app
+from Justice.fdk_justice import justice_bp  # CHANGED: import justice_bp instead of app
 
 app = Flask(__name__)
+
+# Configure session (moved from Justice app)
+app.secret_key = 'fdk_toolkit_secret_2024'
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
+
+# Import and configure Flask-Session
+from flask_session import Session
+Session(app)
 
 # Route to Justice domain
 @app.route('/justice')
 @app.route('/justice/')
 def justice_redirect():
-    return redirect('/justice-upload')
+    return redirect('/justice/justice-upload')  # CHANGED: full blueprint path
 
-# Mount Justice app
-app.register_blueprint(justice_app, url_prefix='/justice')
+# Mount Justice blueprint
+app.register_blueprint(justice_bp, url_prefix='/justice')  # CHANGED: using justice_bp
 
 @app.route('/')
 def home():
