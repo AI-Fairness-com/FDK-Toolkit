@@ -1,15 +1,21 @@
-from flask import Flask, request, jsonify
-import os
+# main/app.py
+from flask import Flask, redirect
+from Justice.fdk_justice import app as justice_app
 
 app = Flask(__name__)
 
-@app.route('/api/justice', methods=['GET', 'POST'])
-def justice_audit():
-    return jsonify({"message": "Justice API is working on Render!"})
+# Route to Justice domain
+@app.route('/justice')
+@app.route('/justice/')
+def justice_redirect():
+    return redirect('/justice-upload')
+
+# Mount Justice app
+app.register_blueprint(justice_app, url_prefix='/justice')
 
 @app.route('/')
 def home():
-    return "AI Fairness Toolkit API Server"
+    return "FDK Toolkit - Navigate to /justice for Justice fairness audit"
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    app.run(host='0.0.0.0', port=5000)
