@@ -828,3 +828,30 @@ if __name__ == "__main__":
         print("✅ No concerning metrics - Assessment reflects composite score")
     
     print("🎯 JUSTICE PIPELINE NOW PRODUCES CONSISTENT ASSESSMENTS!")
+
+# === For GitHub Activation =====
+
+import sys
+import json
+
+# Web interface for GitHub Actions
+if __name__ == "__main__":
+    try:
+        # Your existing test code
+        sample_data = pd.DataFrame({
+            'group': ['Urban', 'Rural', 'Suburban'] * 100,
+            'y_true': np.random.randint(0, 2, 300),
+            'y_pred': np.random.randint(0, 2, 300),
+            'y_prob': np.random.random(300)
+        })
+        
+        pipeline = JusticeFairnessPipeline()
+        results = pipeline.run_pipeline(sample_data)
+        
+        # Web output
+        print("Content-Type: application/json\n")
+        print(json.dumps(results))
+        
+    except Exception as e:
+        print("Content-Type: application/json\n")
+        print(json.dumps({"error": str(e)}))
