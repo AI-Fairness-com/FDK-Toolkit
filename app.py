@@ -5,7 +5,7 @@ app = Flask(__name__)
 
 @app.route('/api/justice', methods=['GET', 'POST'])
 def justice_audit():
-    return jsonify({"message": "Justice API is working on Railway!"})
+    return jsonify({"message": "Justice API is working on Render!"})
 
 @app.route('/')
 def home():
