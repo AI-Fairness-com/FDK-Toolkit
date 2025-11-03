@@ -1,14 +1,100 @@
 name: Justice Fairness API
-on: [workflow_dispatch, repository_dispatch]
+
+on: 
+  workflow_dispatch:
+    inputs:
+      csv_data:
+        description: 'CSV file content (base64 encoded)'
+        required: true
+        type: string
+      filename:
+        description: 'Original filename'
+        required: true
+        type: string
 
 jobs:
   run-justice-audit:
     runs-on: ubuntu-latest
+    outputs:
+      human_report: ${{ steps.run-audit.outputs.human_report }}
+      json_report: ${{ steps.run-audit.outputs.json_report }}
+      audit_status: ${{ steps.run-audit.outputs.audit_status }}
+    
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
-      - run: pip install pandas numpy scikit-learn
-      - name: Run Justice Audit
-        run: cd Justice && python fdk_justice_pipeline.py
+    - uses: actions/checkout@v4
+    
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        pip install pandas numpy scikit-learn flask requests
+    
+    - name: Decode and save CSV input
+      run: |
+        cd Justice
+        echo "${{ github.event.inputs.csv_data }}" | base64 --decode > user_upload.csv
+        echo "CSV file saved with $(wc -l < user_upload.csv) lines"
+    
+    - name: Run Justice Fairness Audit
+      id: run-audit
+      run: |
+        cd Justice
+        python -c "
+        import pandas as pd
+        import numpy as np
+        import json
+        import base64
+        import sys
+        sys.path.append('.')
+        
+        try:
+            # Read uploaded CSV
+            df = pd.read_csv('user_upload.csv')
+            print(f'Dataset loaded: {df.shape}')
+            
+            # Import and run pipeline
+            from fdk_justice_pipeline import run_pipeline
+            results = run_pipeline(df, save_to_disk=False)
+            
+            # Generate human-readable report
+            human_report = f'''
+            ⚖️ JUSTICE FAIRNESS AUDIT COMPLETE
+            
+            Dataset: ${{ github.event.inputs.filename }}
+            Timestamp: {results['timestamp']}
+            
+            OVERALL ASSESSMENT:
+            • Composite Bias Score: {results['summary']['composite_bias_score']:.3f}
+            • Professional: {results['summary']['professional_assessment']}
+            • Public: {results['summary']['public_assessment']}
+            • Legal Risk: {results['summary']['legal_risk_level']}
+            
+            KEY METRICS:
+            • Statistical Parity: {results['fairness_metrics'].get('statistical_parity_difference', 0):.3f}
+            • FPR Difference: {results['fairness_metrics'].get('fpr_difference', 0):.3f}
+            • Equal Opportunity: {results['fairness_metrics'].get('equal_opportunity_difference', 0):.3f}
+            
+            RECOMMENDED ACTION:
+            {results['summary']['required_action']}
+            '''
+            
+            # Output results for PHP consumption
+            print('::set-output name=human_report::' + base64.b64encode(human_report.encode()).decode())
+            print('::set-output name=json_report::' + base64.b64encode(json.dumps(results).encode()).decode())
+            print('::set-output name=audit_status::success')
+            
+        except Exception as e:
+            error_msg = f'Justice audit failed: {str(e)}'
+            print('::set-output name=human_report::' + base64.b64encode(error_msg.encode()).decode())
+            print('::set-output name=json_report::{}')
+            print('::set-output name=audit_status::error')
+        "
+    
+    - name: Upload Audit Results
+      uses: actions/upload-artifact@v4
+      with:
+        name: justice-audit-results
+        path: Justice/user_upload.csv
+        retention-days: 1
