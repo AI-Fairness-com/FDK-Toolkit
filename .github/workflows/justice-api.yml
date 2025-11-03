@@ -7,84 +7,41 @@ on:
         description: 'CSV file content (base64 encoded)'
         required: true
         type: string
-      filename:
-        description: 'Original filename' 
-        required: true
-        type: string
 
 jobs:
-  run-justice-audit:
+  justice-audit:
     runs-on: ubuntu-latest
-    
     steps:
     - uses: actions/checkout@v4
-    
     - uses: actions/setup-python@v4
       with:
         python-version: '3.9'
     
-    - name: Install dependencies
+    - name: Setup environment
       run: |
         cd Justice
         pip install pandas numpy scikit-learn
     
-    - name: Decode and save CSV input
+    - name: Process input
       run: |
         cd Justice
-        echo "${{ github.event.inputs.csv_data }}" | base64 --decode > user_upload.csv
-        echo "✅ CSV file saved with $(wc -l < user_upload.csv) lines"
-    
-    - name: Run Justice Fairness Audit
+        echo "${{ github.event.inputs.csv_data }}" | base64 --decode > input.csv
+        
+    - name: Execute audit
       run: |
         cd Justice
         python -c "
 import pandas as pd
-import numpy as np
-import json
-import base64
 import sys
+sys.path.append('.')
+from fdk_justice_pipeline import run_pipeline
 
-try:
-    # Read uploaded CSV
-    df = pd.read_csv('user_upload.csv')
-    print(f'✅ Dataset loaded: {df.shape}')
-    
-    # Check required columns
-    required = ['group', 'y_true', 'y_pred']
-    missing = [col for col in required if col not in df.columns]
-    if missing:
-        print(f'❌ Missing columns: {missing}')
-        sys.exit(1)
-    
-    print('✅ All required columns present')
-    print(f'Groups found: {df[\\\"group\\\"].unique().tolist()}')
-    
-    # Import and run pipeline
-    sys.path.append('.')
-    from fdk_justice_pipeline import run_pipeline
-    
-    results = run_pipeline(df, save_to_disk=False)
-    
-    print('🎯 JUSTICE AUDIT COMPLETE')
-    print(f'Composite Bias Score: {results[\\\"summary\\\"][\\\"composite_bias_score\\\"]:.3f}')
-    print(f'Assessment: {results[\\\"summary\\\"][\\\"professional_assessment\\\"]}')
-    
-    # Save results
-    with open('audit_results.json', 'w') as f:
-        json.dump(results, f, indent=2)
-    
-    print('✅ Results saved to audit_results.json')
-    
-except Exception as e:
-    print(f'❌ Audit failed: {str(e)}')
-    sys.exit(1)
+df = pd.read_csv('input.csv')
+results = run_pipeline(df, save_to_disk=False)
+
+# Output results in machine-readable format
+print('AUDIT_RESULTS_START')
+print(f'COMPOSITE_SCORE:{results[\"summary\"][\"composite_bias_score\"]}')
+print(f'ASSESSMENT:{results[\"summary\"][\"professional_assessment\"]}')
+print('AUDIT_RESULTS_END')
         "
-    
-    - name: Upload Results
-      uses: actions/upload-artifact@v4
-      with:
-        name: justice-audit-results
-        path: |
-          Justice/user_upload.csv
-          Justice/audit_results.json
-        retention-days: 1
