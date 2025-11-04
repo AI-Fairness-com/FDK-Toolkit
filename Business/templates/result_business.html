@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FDK Business Services Customer Equity Audit - Results</title>
+    <style>
+        .container { max-width: 900px; margin: 40px auto; padding: 20px; }
+        .success-card { background: #f0fff0; padding: 30px; border-radius: 10px; margin: 25px 0; border-left: 5px solid #228B22; }
+        .error-card { background: #f8d7da; padding: 30px; border-radius: 10px; margin: 25px 0; border-left: 5px solid #dc3545; }
+        .summary-card { background: #f0f8f0; padding: 25px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #006400; }
+        .disclaimer-card { background: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107; }
+        .file-info { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0; border: 1px solid #dee2e6; }
+        .summary-content { background: white; padding: 25px; border-radius: 8px; margin: 20px 0; border: 1px solid #e9ecef; }
+        .back-btn { background: #6c757d; color: white; padding: 12px 25px; border: none; border-radius: 5px; cursor: pointer; }
+        .download-btn { background: #228B22; color: white; padding: 12px 25px; border: none; border-radius: 5px; cursor: pointer; margin-left: 10px; }
+        .filename { font-weight: bold; color: #2c3e50; font-size: 1.1em; }
+        .report-path { color: #6c757d; font-size: 0.9em; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏢 FDK Business Services Customer Equity Audit</h1>
+        
+        {% if title == "Business Services Fairness Audit Completed" %}
+        <div class="success-card">
+            <h2 style="color: #006400; margin-top: 0;">✅ {{ title }}</h2>
+            <p style="color: #006400; font-size: 1.1em;">{{ message }}</p>
+        </div>
+
+        <div class="file-info">
+            <h3 style="color: #2c3e50; margin-top: 0;">📁 Business Dataset Information</h3>
+            <p><span class="filename">{{ request.args.get('filename', 'Your uploaded business dataset') }}</span></p>
+            <p style="color: #6c757d; font-size: 0.9em;">
+                ✅ Comprehensive customer equity analysis completed successfully
+            </p>
+        </div>
+
+        <div class="summary-card">
+            <h3 style="color: #006400; margin-top: 0;">📊 Customer Equity Audit Summary</h3>
+            <div class="summary-content">
+                {{ summary|safe }}
+            </div>
+        </div>
+
+        {% if report_filename %}
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="{{ url_for('business.business_upload_page') }}">
+                <button class="back-btn">← Back to Business Upload</button>
+            </a>
+            <a href="{{ url_for('business.download_business_report', filename=report_filename) }}">
+                <button class="download-btn">📥 Download Full JSON Report</button>
+            </a>
+            <p class="report-path">Full technical report: {{ report_filename }}</p>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="error-card">
+            <h2 style="color: #721c24; margin-top: 0;">❌ {{ title }}</h2>
+            <p style="color: #721c24; font-size: 1.1em;">{{ message }}</p>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="{{ url_for('business.business_upload_page') }}">
+                <button class="back-btn">← Back to Business Upload</button>
+            </a>
+        </div>
+        {% endif %}
+
+        <div class="disclaimer-card">
+            <h4 style="color: #856404; margin-top: 0;">🏢 Customer Equity Disclaimer</h4>
+            <p style="color: #856404; font-size: 0.9em; margin: 0;">
+                This customer equity audit complies with consumer protection laws and fair business practice regulations. This tool is for customer equity assessment only and does not provide business guarantees, determine customer eligibility, or replace professional business consultation. For customer equity concerns, consult qualified business professionals.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
