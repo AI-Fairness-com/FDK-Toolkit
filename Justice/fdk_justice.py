@@ -116,6 +116,29 @@ def build_justice_summaries(audit: dict) -> list:
     lines.append(f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     lines.append("")
     
+    # STANDARDIZED DATASET OVERVIEW SECTION
+    lines.append("📊 DATASET OVERVIEW:")
+    if "validation" in audit:
+        validation_info = audit["validation"]
+        lines.append(f"   → Total Cases Analyzed: {validation_info.get('sample_size', 'N/A')}")
+        lines.append(f"   → Protected Groups: {validation_info.get('groups_analyzed', 'N/A')}")
+        if 'statistical_power' in validation_info:
+            lines.append(f"   → Statistical Power: {validation_info['statistical_power'].title()}")
+    elif 'fairness_metrics' in audit and 'group_counts' in audit['fairness_metrics']:
+        group_counts = audit['fairness_metrics']['group_counts']
+        total_records = sum(group_counts.values())
+        num_groups = len(group_counts)
+        lines.append(f"   → Total Cases Analyzed: {total_records}")
+        lines.append(f"   → Protected Groups: {num_groups}")
+        if num_groups <= 10:
+            lines.append(f"   → Group Distribution: {dict(group_counts)}")
+        else:
+            lines.append(f"   → Largest Group: {max(group_counts.values())} cases")
+            lines.append(f"   → Smallest Group: {min(group_counts.values())} cases")
+    else:
+        lines.append("   → Dataset statistics: Information not available")
+    lines.append("")
+    
     # Check for errors
     if "error" in audit:
         lines.append("❌ AUDIT ERROR DETECTED:")
@@ -124,36 +147,6 @@ def build_justice_summaries(audit: dict) -> list:
         lines.append("   → Please check your dataset format and try again.")
         lines.append("")
         return lines
-    
-    # DATASET OVERVIEW - SIMPLIFIED AND ROBUST
-    lines.append("📊 DATASET OVERVIEW:")
-    
-    # Check ALL possible data locations
-    sample_size = "N/A"
-    groups_analyzed = "N/A"
-    
-    if "validation" in audit:
-        validation_info = audit["validation"]
-        sample_size = validation_info.get('sample_size', 'N/A')
-        groups_analyzed = validation_info.get('groups_analyzed', 'N/A')
-    elif 'fairness_metrics' in audit and 'group_counts' in audit['fairness_metrics']:
-        group_counts = audit['fairness_metrics']['group_counts']
-        sample_size = sum(group_counts.values())
-        groups_analyzed = len(group_counts)
-    elif 'group_counts' in audit:
-        group_counts = audit['group_counts']
-        sample_size = sum(group_counts.values())
-        groups_analyzed = len(group_counts)
-    
-    lines.append(f"   → Total Cases Analyzed: {sample_size}")
-    lines.append(f"   → Protected Groups: {groups_analyzed}")
-    
-    # Add statistical power information if available
-    if "validation" in audit and 'statistical_power' in audit["validation"]:
-        lines.append(f"   → Statistical Power: {audit['validation']['statistical_power'].title()}")
-    else:
-        lines.append("   → Statistical Analysis: Completed successfully")
-    lines.append("")
     
     # Overall Assessment
     composite_score = audit.get("summary", {}).get("composite_bias_score")
@@ -270,7 +263,7 @@ def build_justice_summaries(audit: dict) -> list:
     lines.append("For legal concerns, consult qualified legal professionals.")
     
     return lines
-
+    
 # ================================================================
 # FLASK BLUEPRINT SETUP
 # ================================================================
