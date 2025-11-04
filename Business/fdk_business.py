@@ -6,21 +6,14 @@ import os
 import json
 import pandas as pd
 import numpy as np
-from flask import Flask, request, render_template, session, redirect, url_for, send_from_directory
+from flask import Blueprint, request, render_template, session, redirect, url_for, send_from_directory
 from datetime import datetime, timedelta
 
-# Check if Flask-Session is installed
-try:
-    from flask_session import Session
-except ImportError:
-    print("\n❌ ERROR: Flask-Session package not installed!")
-    print("💡 SOLUTION: Run this command in terminal:")
-    print("   pip install Flask-Session")
-    print("Then restart the application: python fdk_business.py")
-    exit(1)
+# CHANGE: Flask app → Blueprint
+business_bp = Blueprint('business', __name__, template_folder='templates')
 
-# Import business pipeline
-from fdk_business_pipeline import interpret_prompt, run_audit_from_request, run_pipeline
+# FIX: Import pipeline with relative import
+from .fdk_business_pipeline import run_pipeline
 
 # ------------------------------------------------
 # Folder Definitions
@@ -304,29 +297,16 @@ def build_business_summaries(audit: dict) -> list:
     return lines
 
 # ------------------------------------------------
-# Flask App Setup
-# ------------------------------------------------
-app = Flask(__name__)
-app.secret_key = 'business_fairness_audit_2024'
-
-# Session configuration
-app.config['SESSION_TYPE'] = 'filesystem'
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
-app.config['SESSION_FILE_THRESHOLD'] = 100
-
-Session(app)
-
-# ------------------------------------------------
 # Business Routes
 # ------------------------------------------------
 
-@app.route('/business-upload')
+@business_bp.route('/business-upload')
 def business_upload_page():
     """Business upload page"""
     session.clear()
     return render_template('upload_business.html')
 
-@app.route('/business-audit', methods=['POST'])
+@business_bp.route('/business-audit', methods=['POST'])
 def start_business_audit_process():
     """Process business dataset upload"""
     if 'file' not in request.files:
@@ -381,7 +361,7 @@ def start_business_audit_process():
         return render_template("result_business.html", title="Error", 
                               message=f"Error reading dataset: {str(e)}", summary=None)
 
-@app.route('/business-run-audit')
+@business_bp.route('/business-run-audit')
 def run_business_audit_with_mapping():
     """Run business audit with detected mapping"""
     dataset_path = session.get('dataset_path')
@@ -457,30 +437,10 @@ def run_business_audit_with_mapping():
         return render_template("result_business.html", title="Business Audit Failed",
                               message=error_msg, summary=None)
 
-@app.route('/download-business-report/<filename>')
+@business_bp.route('/download-business-report/<filename>')
 def download_business_report(filename):
     """Serve business audit reports"""
     try:
         return send_from_directory(REPORT_FOLDER, filename, as_attachment=True)
     except FileNotFoundError:
         return "File not found", 404
-
-@app.route('/')
-def index():
-    """Home page - redirect to business upload"""
-    return redirect(url_for('business_upload_page'))
-
-# ------------------------------------------------
-# Run the app
-# ------------------------------------------------
-if __name__ == '__main__':
-    print("🏢 Starting Business Services FairDiagApp...")
-    print("📊 Session persistence: ENABLED")
-    print("🤖 Auto-detection: ENABLED (3-layer detection)")
-    print("🔧 Full Type Conversion: ENABLED")
-    print("👥 Customer Equity Summaries: ENABLED")
-    print("🎯 36 Business Fairness Metrics: ENABLED")
-    print("📁 Separate Business Folders: ENABLED")
-    print("🌐 Business Server running at: http://localhost:5007")
-    port = int(os.environ.get("PORT", 5007))
-    app.run(host='0.0.0.0', port=port, debug=True)
