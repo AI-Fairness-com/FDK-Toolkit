@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FDK Justice - Audit Results</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .title {
+            font-size: 2em;
+            color: #e74c3c;
+            margin-bottom: 10px;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .summary {
+            background: #e8f4fd;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 25px 0;
+            border: 1px solid #3498db;
+            white-space: pre-line;
+            font-family: monospace;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+        
+        .download-section {
+            text-align: center;
+            margin: 40px 0;
+            padding: 30px;
+            background: linear-gradient(135deg, #27ae60, #229954);
+            color: white;
+            border-radius: 15px;
+        }
+        
+        .download-btn {
+            background: white;
+            color: #27ae60;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1em;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        
+        .new-audit-section {
+            text-align: center;
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .new-audit-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1em;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .new-audit-btn:hover {
+            background: #2980b9;
+            transform: translateY(-1px);
+        }
+        
+        .metrics-highlight {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 25px 0;
+        }
+        
+        .metric-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #e1e8ed;
+        }
+        
+        .metric-number {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">⚖️ FDK Justice Fairness Audit</div>
+            <div class="title">{{ title }}</div>
+        </div>
+        
+        {% if "Error" in title or "Failed" in title %}
+        <div class="status-error">
+            <h3>❌ {{ title }}</h3>
+            <p>{{ message }}</p>
+        </div>
+        {% else %}
+        <div class="status-success">
+            <h3>✅ {{ title }}</h3>
+            <p>{{ message }}</p>
+        </div>
+        
+        <div class="metrics-highlight">
+            <div class="metric-card">
+                <div class="metric-number">18</div>
+                <div>Fairness Metrics</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-number">7</div>
+                <div>Metric Categories</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-number">⚖️</div>
+                <div>Legal Standards</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-number">📊</div>
+                <div>Comprehensive</div>
+            </div>
+        </div>
+        
+        {% if summary %}
+        <div class="summary">
+            {{ summary | safe }}
+        </div>
+        {% endif %}
+        
+        {% if report_filename %}
+        <div class="download-section">
+            <h2>📥 Download Complete Justice Audit Report</h2>
+            <p>Your comprehensive fairness audit report is ready for download and legal review.</p>
+            <a href="{{ url_for('justice.download_justice_report', filename=report_filename) }}" class="download-btn">
+                📄 DOWNLOAD JUSTICE AUDIT REPORT
+            </a>
+        </div>
+        {% endif %}
+        {% endif %}
+        
+        <div class="new-audit-section">
+            <h3>🔁 Start New Justice Fairness Audit</h3>
+            <p>Upload a different justice dataset or re-analyze with new parameters</p>
+            <a href="{{ url_for('justice.justice_upload_page') }}" class="new-audit-btn">
+                ⚖️ NEW JUSTICE AUDIT
+            </a>
+        </div>
+    </div>
+</body>
+</html>
