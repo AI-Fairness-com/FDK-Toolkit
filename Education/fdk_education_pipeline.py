@@ -55,7 +55,7 @@ def convert_numpy_types(obj):
         return int(obj)
     elif isinstance(obj, (np.floating, np.float64, np.float32, np.float16)):
         return float(obj)
-    elif isinstance(obj, (np.bool_, np.bool)):
+    elif isinstance(obj, np.bool_):  # ← FIXED: Removed np.bool
         return bool(obj)
     elif isinstance(obj, np.ndarray):
         return obj.tolist()
