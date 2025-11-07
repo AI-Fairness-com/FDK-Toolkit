@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FDK Hiring Fairness Audit - Results</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1ECBD8;
+            --secondary: #FBBC04;
+            --accent: #3498db;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --warning: #f39c12;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --gray: #7f8c8d;
+            --gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--gradient);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .glass-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 25px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, var(--primary), #19b1bd);
+            color: white;
+            padding: 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--secondary), var(--accent), #23e0ef);
+        }
+
+        .logo {
+            font-size: 2.8em;
+            font-weight: 800;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #fff, #ecf0f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .domain-title {
+            font-size: 1.8em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            opacity: 0.95;
+        }
+
+        .tagline {
+            font-size: 1.1em;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        .content-section {
+            padding: 50px 40px;
+        }
+
+        .status-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 40px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+            border-left: 6px solid var(--success);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .status-card.error {
+            border-left-color: var(--error);
+        }
+
+        .status-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--success), var(--primary));
+        }
+
+        .status-card.error::before {
+            background: linear-gradient(90deg, var(--error), #c0392b);
+        }
+
+        .status-icon {
+            font-size: 3em;
+            margin-bottom: 20px;
+            color: var(--success);
+        }
+
+        .status-card.error .status-icon {
+            color: var(--error);
+        }
+
+        .status-title {
+            color: var(--dark);
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .status-message {
+            color: var(--gray);
+            font-size: 1.1em;
+            line-height: 1.7;
+        }
+
+        .file-info-card {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 40px;
+            border-left: 6px solid var(--primary);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        }
+
+        .file-info-title {
+            color: var(--dark);
+            font-size: 1.4em;
+            margin-bottom: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .file-info-title i {
+            color: var(--primary);
+        }
+
+        .filename {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 15px;
+            font-weight: 600;
+            color: var(--dark);
+            border: 2px solid var(--light);
+            font-size: 1.1em;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+
+        .file-status {
+            color: var(--success);
+            font-weight: 600;
+            font-size: 1em;
+        }
+
+        .summary-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 40px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+            border-top: 5px solid var(--secondary);
+            position: relative;
+        }
+
+        .summary-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+        }
+
+        .summary-title {
+            color: var(--dark);
+            font-size: 1.6em;
+            margin-bottom: 25px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .summary-title i {
+            color: var(--secondary);
+        }
+
+        .summary-content {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            padding: 30px;
+            border-radius: 15px;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .action-buttons {
+            text-align: center;
+            margin: 50px 0 30px 0;
+        }
+
+        .back-btn {
+            background: linear-gradient(135deg, var(--gray), #95a5a6);
+            color: white;
+            border: none;
+            padding: 18px 35px;
+            font-size: 1.1em;
+            font-weight: 600;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(149, 165, 166, 0.4);
+            margin-right: 15px;
+        }
+
+        .back-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(149, 165, 166, 0.6);
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, var(--success), #219653);
+            color: white;
+            border: none;
+            padding: 18px 35px;
+            font-size: 1.1em;
+            font-weight: 600;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(39, 174, 96, 0.4);
+        }
+
+        .download-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(39, 174, 96, 0.6);
+        }
+
+        .report-path {
+            text-align: center;
+            color: var(--gray);
+            font-size: 0.9em;
+            margin-top: 15px;
+            font-style: italic;
+        }
+
+        .legal-section {
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+            border: 1px solid var(--warning);
+            border-radius: 20px;
+            padding: 30px;
+            margin-top: 50px;
+            position: relative;
+            border-left: 6px solid var(--warning);
+        }
+
+        .legal-icon {
+            position: absolute;
+            top: -15px;
+            left: 30px;
+            background: white;
+            padding: 10px;
+            border-radius: 50%;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            color: var(--warning);
+        }
+
+        .legal-content {
+            margin-left: 50px;
+        }
+
+        .legal-title {
+            color: #856404;
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .legal-text {
+            color: #856404;
+            line-height: 1.6;
+            font-size: 0.95em;
+        }
+
+        @media (max-width: 768px) {
+            .glass-container {
+                margin: 10px;
+                border-radius: 20px;
+            }
+            
+            .hero-section {
+                padding: 30px 20px;
+            }
+            
+            .content-section {
+                padding: 30px 20px;
+            }
+            
+            .logo {
+                font-size: 2.2em;
+            }
+            
+            .status-card, .file-info-card, .summary-card {
+                padding: 25px 20px;
+            }
+            
+            .action-buttons {
+                display: flex;
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .back-btn, .download-btn {
+                margin: 0;
+                width: 100%;
+            }
+            
+            .legal-content {
+                margin-left: 0;
+                margin-top: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="glass-container">
+        <div class="hero-section">
+            <div class="logo">
+                <i class="fas fa-user-tie" style="color: #FBBC04;"></i> FDK™ Hiring
+            </div>
+            <div class="domain-title">Hiring Fairness Audit Results</div>
+            <div class="tagline">Comprehensive Recruitment Equity Analysis Report</div>
+        </div>
+
+        <div class="content-section">
+            {% if title == "Hiring Fairness Audit Completed" %}
+            <div class="status-card">
+                <div class="status-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h2 class="status-title">{{ title }}</h2>
+                <p class="status-message">{{ message }}</p>
+            </div>
+
+            <div class="file-info-card">
+                <div class="file-info-title">
+                    <i class="fas fa-file-csv"></i> Hiring Dataset Information
+                </div>
+                <div class="filename">{{ request.args.get('filename', 'Your uploaded hiring dataset') }}</div>
+                <p class="file-status">
+                    <i class="fas fa-check"></i> Comprehensive hiring fairness analysis completed successfully
+                </p>
+            </div>
+
+            <div class="summary-card">
+                <div class="summary-title">
+                    <i class="fas fa-chart-bar"></i> Hiring Audit Summary
+                </div>
+                <div class="summary-content">
+                    {{ summary|safe }}
+                </div>
+            </div>
+
+            {% if report_filename %}
+            <div class="action-buttons">
+                <a href="/hiring/hiring-upload">
+                    <button class="back-btn">
+                        <i class="fas fa-arrow-left"></i> Back to Hiring Upload
+                    </button>
+                </a>
+                <a href="{{ url_for('hiring.download_hiring_report', filename=report_filename) }}">
+                    <button class="download-btn">
+                        <i class="fas fa-download"></i> Download Full JSON Report
+                    </button>
+                </a>
+                <p class="report-path">Full technical report: {{ report_filename }}</p>
+            </div>
+            {% endif %}
+
+            {% else %}
+            <div class="status-card error">
+                <div class="status-icon">
+                    <i class="fas fa-exclamation-circle"></i>
+                </div>
+                <h2 class="status-title">{{ title }}</h2>
+                <p class="status-message">{{ message }}</p>
+            </div>
+
+            <div class="action-buttons">
+                <a href="/hiring/hiring-upload">
+                    <button class="back-btn">
+                        <i class="fas fa-arrow-left"></i> Back to Hiring Upload
+                    </button>
+                </a>
+            </div>
+            {% endif %}
+
+            <div class="legal-section">
+                <div class="legal-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="legal-content">
+                    <div class="legal-title">👔 Compliance Disclaimer</div>
+                    <div class="legal-text">
+                        This hiring fairness audit complies with EEO regulations and algorithmic accountability frameworks. 
+                        This tool is for fairness assessment only and does not provide hiring guarantees, determine employment eligibility, 
+                        or replace professional HR consultation. For compliance concerns, consult qualified HR professionals.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

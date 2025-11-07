@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FDK Hiring Fairness Audit - Auto-Detection Results</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1ECBD8;
+            --secondary: #FBBC04;
+            --accent: #3498db;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --gray: #7f8c8d;
+            --gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--gradient);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .glass-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 25px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, var(--primary), #19b1bd);
+            color: white;
+            padding: 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--secondary), var(--accent), #23e0ef);
+        }
+
+        .logo {
+            font-size: 2.8em;
+            font-weight: 800;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #fff, #ecf0f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .domain-title {
+            font-size: 1.8em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            opacity: 0.95;
+        }
+
+        .tagline {
+            font-size: 1.1em;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        .content-section {
+            padding: 50px 40px;
+        }
+
+        .file-info {
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 40px;
+            border-left: 6px solid var(--warning);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            position: relative;
+        }
+
+        .file-info h3 {
+            color: #856404;
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            font-weight: 600;
+        }
+
+        .filename {
+            background: white;
+            padding: 12px 20px;
+            border-radius: 15px;
+            font-weight: 600;
+            color: #856404;
+            border: 2px solid rgba(255, 193, 7, 0.3);
+            font-size: 1.1em;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+
+        .file-info p {
+            color: #856404;
+            font-size: 0.95em;
+            margin: 0;
+        }
+
+        .success-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 40px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+            border-left: 6px solid var(--success);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .success-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--success), var(--primary));
+        }
+
+        .success-card h2 {
+            color: #0056b3;
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        .success-card p {
+            color: #0056b3;
+            font-size: 1.1em;
+            margin: 0;
+        }
+
+        .info-card {
+            background: linear-gradient(135deg, #f0f8ff, #e1f0ff);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 40px;
+            border-left: 6px solid var(--accent);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        }
+
+        .info-card h3 {
+            color: #003366;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+
+        .info-card ul {
+            margin-bottom: 25px;
+            padding-left: 20px;
+        }
+
+        .info-card li {
+            margin-bottom: 10px;
+            color: var(--dark);
+        }
+
+        .info-card strong {
+            color: var(--primary);
+        }
+
+        .stats {
+            color: var(--gray);
+            font-size: 0.95em;
+            margin-top: 10px;
+        }
+
+        .mapping-list {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 40px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+            border: 1px solid rgba(233, 236, 239, 0.8);
+        }
+
+        .mapping-list h3 {
+            color: var(--dark);
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 1.6em;
+            font-weight: 600;
+        }
+
+        .mapping-list p {
+            color: var(--gray);
+            margin-bottom: 25px;
+            font-size: 1.1em;
+        }
+
+        .mapping-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid rgba(233, 236, 239, 0.8);
+            transition: all 0.3s ease;
+        }
+
+        .mapping-item:hover {
+            background: rgba(30, 203, 216, 0.05);
+            transform: translateX(5px);
+        }
+
+        .mapping-item:last-child {
+            border-bottom: none;
+        }
+
+        .column-name {
+            font-weight: 700;
+            color: var(--dark);
+            font-size: 1.1em;
+        }
+
+        .column-purpose {
+            color: #007bff;
+            font-size: 0.95em;
+            font-weight: 600;
+        }
+
+        .action-section {
+            text-align: center;
+            margin: 50px 0 30px 0;
+        }
+
+        .audit-btn {
+            background: linear-gradient(135deg, var(--success), #219653);
+            color: white;
+            border: none;
+            padding: 20px 50px;
+            font-size: 1.2em;
+            font-weight: 600;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(39, 174, 96, 0.4);
+        }
+
+        .audit-btn:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 15px 35px rgba(39, 174, 96, 0.6);
+            background: linear-gradient(135deg, #219653, var(--success));
+        }
+
+        .footer-note {
+            text-align: center;
+            color: var(--gray);
+            margin-top: 40px;
+            font-size: 0.9em;
+        }
+
+        @media (max-width: 768px) {
+            .glass-container {
+                margin: 10px;
+                border-radius: 20px;
+            }
+            
+            .hero-section {
+                padding: 30px 20px;
+            }
+            
+            .content-section {
+                padding: 30px 20px;
+            }
+            
+            .logo {
+                font-size: 2.2em;
+            }
+            
+            .success-card, .info-card, .mapping-list, .file-info {
+                padding: 25px 20px;
+            }
+            
+            .mapping-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .audit-btn {
+                width: 100%;
+                padding: 18px 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="glass-container">
+        <div class="hero-section">
+            <div class="logo">
+                <i class="fas fa-user-tie" style="color: #FBBC04;"></i> FDK™ Hiring
+            </div>
+            <div class="domain-title">Auto-Detection Results</div>
+            <div class="tagline">Intelligent Column Mapping for Hiring Fairness Audit</div>
+        </div>
+
+        <div class="content-section">
+            <!-- File Information -->
+            <div class="file-info">
+                <h3>📁 Hiring Dataset Verification</h3>
+                <p><span class="filename">{{ filename }}</span></p>
+                <p>
+                    ✅ Successfully uploaded and analyzed. The hiring fairness audit will be performed on this specific dataset.
+                </p>
+            </div>
+            
+            <div class="success-card">
+                <h2>✅ Hiring Auto-Detection Successful!</h2>
+                <p>
+                    We automatically analyzed your hiring dataset and identified the key columns needed for fairness auditing.
+                </p>
+            </div>
+
+            <div class="info-card">
+                <h3>🔍 How Our Hiring Detection Works:</h3>
+                <p>Our system scans your dataset and intelligently identifies:</p>
+                <ul>
+                    <li><strong>Applicant Groups:</strong> Demographic columns (department, education, experience, gender, ethnicity)</li>
+                    <li><strong>Hiring Outcomes:</strong> Binary hiring outcomes (hired, selected, promoted, interviewed)</li>
+                    <li><strong>Screening Predictions:</strong> Algorithmic screening assessments and hiring decisions</li>
+                    <li><strong>Confidence Scores:</strong> Probability values between 0-1 (if available)</li>
+                </ul>
+                <p class="stats">📊 Dataset analyzed: {{ total_columns }} total columns → {{ detected_key_features }} key features selected</p>
+            </div>
+
+            <div class="mapping-list">
+                <h3>📋 Detected Hiring Column Mapping:</h3>
+                <p>Your hiring fairness audit will be based on these automatically selected features from <strong>{{ filename }}</strong>:</p>
+                
+                <div class="mapping-item">
+                    <span class="column-name">{{ suggested_mappings.group }}</span>
+                    <span class="column-purpose">→ Applicant Groups for Fairness Analysis</span>
+                </div>
+                
+                <div class="mapping-item">
+                    <span class="column-name">{{ suggested_mappings.y_true }}</span>
+                    <span class="column-purpose">→ Hiring Outcomes & Selection Decisions</span>
+                </div>
+                
+                <div class="mapping-item">
+                    <span class="column-name">{{ suggested_mappings.y_pred }}</span>
+                    <span class="column-purpose">→ Screening Assessments & Algorithm Predictions</span>
+                </div>
+                
+                {% if suggested_mappings.y_prob %}
+                <div class="mapping-item">
+                    <span class="column-name">{{ suggested_mappings.y_prob }}</span>
+                    <span class="column-purpose">→ Confidence Scores & Probability Values</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="action-section">
+                <form action="{{ url_for('hiring.run_hiring_audit_with_mapping') }}">
+                    <button type="submit" class="audit-btn">
+                        👔 Run Hiring Fairness Audit on {{ filename }}
+                    </button>
+                </form>
+                <p class="stats">15 hiring fairness metrics will be analyzed using the detected column mapping from your uploaded dataset</p>
+            </div>
+
+            <div class="footer-note">
+                <small>Hiring Domain Coverage • EEO Compliance • Automated Detection</small>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
