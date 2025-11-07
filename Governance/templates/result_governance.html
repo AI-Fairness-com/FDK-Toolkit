@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FDK Governance - Audit Results</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #A08470;
+            --secondary: #45352F;
+            --accent: #3498db;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --gray: #7f8c8d;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+            color: #2c3e50;
+        }
+
+        .glass-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 25px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, var(--primary), #8a715f);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--secondary), var(--accent), #b89a85);
+        }
+
+        .logo {
+            font-size: 3em;
+            font-weight: 800;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #fff, #ecf0f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .page-title {
+            font-size: 2em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: white;
+        }
+
+        .content-section {
+            padding: 50px 40px;
+        }
+
+        .status-card {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin-bottom: 40px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+            border-left: 6px solid #27ae60;
+            text-align: center;
+        }
+
+        .status-error {
+            border-left-color: #e74c3c;
+            background: linear-gradient(135deg, #fff, #fdf2f2);
+        }
+
+        .status-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            color: #27ae60;
+        }
+
+        .status-error .status-icon {
+            color: #e74c3c;
+        }
+
+        .status-title {
+            font-size: 1.8em;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .status-message {
+            color: #7f8c8d;
+            font-size: 1.1em;
+            line-height: 1.7;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin: 40px 0;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 30px 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border-top: 5px solid var(--primary);
+            transition: all 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .metric-number {
+            font-size: 2.5em;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .metric-label {
+            color: #2c3e50;
+            font-weight: 600;
+            font-size: 1.1em;
+            margin-bottom: 8px;
+        }
+
+        .metric-description {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        .results-summary {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            padding: 40px;
+            border-radius: 20px;
+            margin: 40px 0;
+            border-left: 6px solid var(--secondary);
+        }
+
+        .summary-title {
+            color: #2c3e50;
+            font-size: 1.6em;
+            margin-bottom: 25px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .summary-title i {
+            color: var(--secondary);
+        }
+
+        .summary-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+            line-height: 1.8;
+            color: #2c3e50;
+            white-space: pre-line;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        }
+
+        .download-section {
+            background: linear-gradient(135deg, var(--primary), #8a715f);
+            color: white;
+            padding: 50px 40px;
+            border-radius: 20px;
+            text-align: center;
+            margin: 50px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .download-section::before {
+            content: '';
+            position: absolute;
+            top: -50px;
+            right: -50px;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .download-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            opacity: 0.9;
+        }
+
+        .download-title {
+            font-size: 2em;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .download-subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+            margin-bottom: 30px;
+        }
+
+        .download-btn {
+            background: white;
+            color: var(--primary);
+            border: none;
+            padding: 18px 45px;
+            font-size: 1.2em;
+            font-weight: 600;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+
+        .download-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+        }
+
+        .new-audit-section {
+            text-align: center;
+            padding: 40px;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 20px;
+            margin-top: 40px;
+        }
+
+        .new-audit-title {
+            color: #2c3e50;
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .new-audit-subtitle {
+            color: #7f8c8d;
+            margin-bottom: 25px;
+        }
+
+        .new-audit-btn {
+            background: linear-gradient(135deg, var(--primary), #8a715f);
+            color: white;
+            border: none;
+            padding: 15px 35px;
+            font-size: 1.1em;
+            font-weight: 600;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .new-audit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(160, 132, 112, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .glass-container {
+                margin: 10px;
+                border-radius: 20px;
+            }
+            
+            .hero-section, .content-section {
+                padding: 30px 20px;
+            }
+            
+            .logo {
+                font-size: 2.5em;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .status-card, .results-summary {
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="glass-container">
+        <div class="hero-section">
+            <div class="logo">
+                <i class="fas fa-landmark" style="color: #45352F;"></i> FDK™ Governance
+            </div>
+            <div class="page-title">{{ title }}</div>
+        </div>
+
+        <div class="content-section">
+            {% if "Error" in title or "Failed" in title %}
+            <div class="status-card status-error">
+                <div class="status-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="status-title">{{ title }}</div>
+                <div class="status-message">{{ message }}</div>
+            </div>
+            {% else %}
+            <div class="status-card">
+                <div class="status-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="status-title">{{ title }}</div>
+                <div class="status-message">{{ message }}</div>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-number">30</div>
+                    <div class="metric-label">Fairness Metrics</div>
+                    <div class="metric-description">Comprehensive policy equity analysis</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-number">7</div>
+                    <div class="metric-label">Metric Categories</div>
+                    <div class="metric-description">Specialized governance domains</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-number">
+                        <i class="fas fa-balance-scale"></i>
+                    </div>
+                    <div class="metric-label">Government Standards</div>
+                    <div class="metric-description">Public sector compliance</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-number">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <div class="metric-label">Full Analysis</div>
+                    <div class="metric-description">Complete equity assessment</div>
+                </div>
+            </div>
+
+            {% if summary %}
+            <div class="results-summary">
+                <div class="summary-title">
+                    <i class="fas fa-chart-pie"></i> Policy Equity Analysis Summary
+                </div>
+                <div class="summary-content">
+                    {{ summary | safe }}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if report_filename %}
+            <div class="download-section">
+                <div class="download-icon">
+                    <i class="fas fa-file-download"></i>
+                </div>
+                <div class="download-title">Download Complete Governance Audit Report</div>
+                <div class="download-subtitle">
+                    Your comprehensive policy equity audit report is ready for government review and compliance documentation.
+                </div>
+                <a href="{{ url_for('governance.download_governance_report', filename=report_filename) }}" class="download-btn">
+                    <i class="fas fa-download"></i> DOWNLOAD GOVERNANCE AUDIT REPORT
+                </a>
+            </div>
+            {% endif %}
+            {% endif %}
+
+            <div class="new-audit-section">
+                <div class="new-audit-title">Start New Policy Equity Audit</div>
+                <div class="new-audit-subtitle">
+                    Upload a different governance dataset or re-analyze with new public sector parameters
+                </div>
+                <a href="{{ url_for('governance.governance_upload_page') }}" class="new-audit-btn">
+                    <i class="fas fa-plus-circle"></i> NEW POLICY EQUITY AUDIT
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
