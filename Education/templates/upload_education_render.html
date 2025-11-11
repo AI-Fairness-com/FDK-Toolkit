@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FDK Education Fairness Audit</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    :root {
+      --primary:#660033;
+      --secondary:#FFD700;
+      --accent:#3498db;
+      --success:#27ae60;
+      --warning:#f39c12;
+      --light:#ecf0f1;
+      --dark:#2c3e50;
+      --gray:#7f8c8d;
+      --gradient:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+    }
+    body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--gradient);min-height:100vh;padding:20px;line-height:1.6;}
+    .glass-container{max-width:1200px;margin:0 auto;background:rgba(255,255,255,0.95);backdrop-filter:blur(20px);border-radius:25px;box-shadow:0 25px 50px rgba(0,0,0,0.15);overflow:hidden;border:1px solid rgba(255,255,255,0.2);}
+    .hero-section{background:linear-gradient(135deg,var(--primary),#4d0026);color:white;padding:60px 40px;text-align:center;position:relative;overflow:hidden;}
+    .hero-section::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--secondary),var(--accent),#800040);}
+    .logo{font-size:3.5em;font-weight:800;margin-bottom:15px;background:linear-gradient(135deg,#fff,#ecf0f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-shadow:0 2px 10px rgba(0,0,0,0.1);}
+    .domain-title{font-size:2.2em;font-weight:600;margin-bottom:20px;opacity:0.95;}
+    .tagline{font-size:1.3em;opacity:0.9;margin-bottom:25px;font-weight:300;}
+    .metrics-badge{background:rgba(255,255,255,0.2);backdrop-filter:blur(10px);color:white;padding:15px 30px;border-radius:30px;font-size:1.1em;font-weight:600;display:inline-block;border:1px solid rgba(255,255,255,0.3);box-shadow:0 5px 15px rgba(0,0,0,0.1);transition:all 0.3s ease;}
+    .metrics-badge:hover{background:rgba(255,255,255,0.3);transform:scale(1.05);}
+    .metrics-badge a{color:#fff;text-decoration:none;display:block;width:100%;height:100%;}
+    .content-section{padding:50px 40px;}
+    .description-card{background:linear-gradient(135deg,#f8f9fa,#e9ecef);padding:40px;border-radius:20px;margin-bottom:50px;border-left:6px solid var(--secondary);box-shadow:0 10px 30px rgba(0,0,0,0.08);}
+    .description-title{color:var(--dark);font-size:1.6em;margin-bottom:20px;font-weight:600;display:flex;align-items:center;gap:15px;}
+    .description-title i{color:var(--secondary);font-size:1.2em;}
+    .description-text{color:var(--gray);font-size:1.1em;line-height:1.7;}
+    .upload-section{margin-bottom:50px;}
+    .upload-card{background:white;border-radius:20px;padding:50px;text-align:center;box-shadow:0 15px 40px rgba(0,0,0,0.1);border:2px dashed var(--primary);transition:all 0.4s ease;position:relative;overflow:hidden;}
+    .upload-card:hover{transform:translateY(-8px);border-color:var(--secondary);box-shadow:0 25px 50px rgba(102,0,51,0.2);}
+    .upload-icon{font-size:5em;color:var(--primary);margin-bottom:25px;transition:all 0.3s ease;}
+    .upload-card:hover .upload-icon{color:var(--secondary);transform:scale(1.1);}
+    .upload-title{color:var(--dark);font-size:1.8em;margin-bottom:15px;font-weight:600;}
+    .upload-subtitle{color:var(--gray);font-size:1.1em;margin-bottom:30px;}
+    .file-upload-container{display:inline-block;padding:10px;border-radius:50px;transition:all 0.3s ease;}
+    .file-input-wrapper{position:relative;display:inline-block;}
+    .file-input{position:absolute;left:0;top:0;opacity:0;width:100%;height:100%;cursor:pointer;}
+    .file-input-label{display:inline-flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(135deg,var(--primary),#4d0026);color:white;border-radius:40px;font-size:1.15em;font-weight:800;padding:20px 45px;text-transform:uppercase;letter-spacing:0.5px;transition:all 0.3s ease;box-shadow:0 4px 12px rgba(255,215,0,0.4);}
+    .file-input-label:hover{background:linear-gradient(135deg,#4d0026,var(--primary));transform:translateY(-4px);box-shadow:0 8px 18px rgba(255,215,0,0.6);}
+    .file-input-label i{font-size:1.3em;}
+    .file-upload-container:hover{transform:translateY(-5px);box-shadow:0 10px 25px rgba(255,215,0,0.35);}
+    .submit-btn{background:linear-gradient(135deg,var(--secondary),#ccac00);color:white;border:none;padding:20px 60px;font-size:1.3em;font-weight:600;border-radius:35px;cursor:pointer;transition:all 0.3s ease;box-shadow:0 8px 25px rgba(255,215,0,0.4);letter-spacing:0.5px;margin-top:20px;}
+    .submit-btn:hover{transform:translateY(-4px);box-shadow:0 15px 35px rgba(255,215,0,0.6);background:linear-gradient(135deg,#ccac00,var(--secondary));}
+    .features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:30px;}
+    .feature-card{background:white;padding:40px 30px;border-radius:20px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,0.08);transition:all 0.3s ease;position:relative;overflow:hidden;border-top:5px solid var(--primary);cursor:pointer;}
+    .feature-card:hover{transform:translateY(-8px);box-shadow:0 20px 40px rgba(0,0,0,0.15);}
+    .feature-icon{font-size:3em;margin-bottom:25px;color:var(--primary);transition:all 0.3s ease;}
+    .feature-card:hover .feature-icon{color:var(--secondary);transform:scale(1.1);}
+    .feature-title{color:var(--dark);font-size:1.4em;margin-bottom:15px;font-weight:600;}
+    .feature-description{color:var(--gray);line-height:1.6;}
+    .feature-card a{text-decoration:none;color:inherit;display:block;width:100%;height:100%;}
+    .legal-section{background:linear-gradient(135deg,#fff3cd,#ffeaa7);border:1px solid var(--warning);border-radius:15px;padding:30px;margin-top:50px;position:relative;border-left:6px solid var(--warning);cursor:pointer;transition:all 0.3s ease;}
+    .legal-section:hover{background:linear-gradient(135deg,#ffeaa7,#fff3cd);transform:translateY(-3px);box-shadow:0 10px 25px rgba(0,0,0,0.1);}
+    .legal-icon{position:absolute;top:-15px;left:30px;background:white;padding:10px;border-radius:50%;box-shadow:0 5px 15px rgba(0,0,0,0.1);color:var(--warning);}
+    .legal-title{color:#856404;font-weight:700;margin-bottom:10px;font-size:1.3em;}
+    .legal-text{color:#856404;line-height:1.6;font-size:1.05em;}
+    .legal-section a{text-decoration:none;color:inherit;display:block;width:100%;height:100%;}
+    .file-name{display:block;margin-top:10px;color:var(--success);font-weight:600;font-size:0.95em;}
+  </style>
+</head>
+<body>
+  <div class="glass-container">
+    <!-- HERO -->
+    <div class="hero-section">
+      <div class="logo"><i class="fas fa-graduation-cap" style="color:#FFD700;"></i> FDK™ Education</div>
+      <div class="domain-title">Education Domain Fairness Audit</div>
+      <div class="tagline">Upload Education Dataset (CSV) for Educational Equity Analysis</div>
+      <div class="metrics-badge">
+        <a href="/education-fairness-metrics/"><i class="fas fa-chart-line"></i> 26 Education Fairness Metrics</a>
+      </div>
+    </div>
+
+    <!-- INTRO -->
+    <div class="content-section">
+      <div class="description-card">
+        <div class="description-title">
+          <i class="fas fa-book-open" style="color:#FFD700;"></i>
+          Admission • Assessment • Student Groups • Learning Outcomes
+        </div>
+        <div class="description-text">
+          Upload your educational dataset to analyse fairness across student demographics, detect algorithmic bias in admission or assessment systems,
+          and ensure equitable learning opportunities. This audit highlights disparities in access, performance, and institutional outcomes.
+        </div>
+      </div>
+
+      <!-- UPLOAD -->
+      <div class="upload-section">
+        <form action="https://fdk-toolkit.onrender.com/education/education-audit" method="post" enctype="multipart/form-data">
+          <div class="upload-card">
+            <div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+            <div class="upload-title">Upload Education Dataset</div>
+            <div class="upload-subtitle">Select a CSV file containing educational data for fairness analysis</div>
+
+            <div class="file-upload-container">
+              <div class="file-input-wrapper">
+                <label for="educationFile" class="file-input-label">
+                  <i class="fas fa-file-csv"></i> Choose CSV File
+                </label>
+                <input type="file" name="file" accept=".csv" required class="file-input" id="educationFile" />
+              </div>
+              <span class="file-name" id="fileName"></span>
+            </div>
+
+            <br /><br />
+            <small style="color:#660033;">Accepted format: CSV only. Remove personal identifiers (names, IDs).</small><br /><br />
+            <button type="submit" class="submit-btn">
+              <i class="fas fa-play-circle"></i> Start Education Fairness Audit
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- FEATURES -->
+      <div class="features-section">
+        <div class="features-grid">
+          <div class="feature-card">
+            <a href="https://ai-fairness.com/education-bias-detection-2/">
+              <div class="feature-icon"><i class="fas fa-search-plus"></i></div>
+              <div class="feature-title">Education Bias Detection</div>
+              <div class="feature-description">
+                Detects disparities in admissions, grading, or resource allocation across different student groups.
+              </div>
+            </a>
+          </div>
+
+          <div class="feature-card">
+            <a href="/education-compliance/">
+              <div class="feature-icon"><i class="fas fa-scale-balanced"></i></div>
+              <div class="feature-title">Education Compliance</div>
+              <div class="feature-description">
+                26 fairness metrics aligned with equality laws, accessibility standards, and ethical education principles.
+              </div>
+            </a>
+          </div>
+
+          <div class="feature-card">
+            <a href="/education-equity-analytics/">
+              <div class="feature-icon"><i class="fas fa-chart-pie"></i></div>
+              <div class="feature-title">Education Equity Analytics</div>
+              <div class="feature-description">
+                Provides fairness dashboards, performance disparity visualisations, and data-driven insights for transparent education systems.
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- DISCLAIMER -->
+      <a href="/legal-disclaimer/">
+        <div class="legal-section">
+          <div class="legal-icon"><i class="fas fa-exclamation-triangle"></i></div>
+          <div class="legal-content">
+            <div class="legal-title">Legal Disclaimer</div>
+            <div class="legal-text">
+              This toolkit provides fairness assessment and analytical research for educational data only.
+              It supports institutional equity but does not replace professional legal or compliance advice.
+              Read full Legal Disclaimer →
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded',function(){
+      const fileInput=document.getElementById('educationFile');
+      const fileName=document.getElementById('fileName');
+      fileInput.addEventListener('change',function(e){
+        if(e.target.files.length>0){
+          fileName.textContent='✅ Selected: '+e.target.files[0].name;
+          fileName.style.color='#27ae60';
+        }else{fileName.textContent='';}
+      });
+    });
+  </script>
+</body>
+</html>
