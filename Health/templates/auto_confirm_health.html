@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FDK Health - Column Verification</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #005EB8;
+            --secondary: #d81e05;
+            --accent: #3498db;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --gray: #7f8c8d;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .glass-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 25px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, var(--primary), #004c8f);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--secondary), var(--accent), #0077cc);
+        }
+
+        .logo {
+            font-size: 3em;
+            font-weight: 800;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #fff, #ecf0f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .page-title {
+            font-size: 2em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: white;
+        }
+
+        .content-section {
+            padding: 50px 40px;
+        }
+
+        .filename-card {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            padding: 25px;
+            border-radius: 15px;
+            margin: 25px 0;
+            border-left: 6px solid var(--accent);
+            font-family: monospace;
+            font-size: 1.1em;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .success-badge {
+            background: linear-gradient(135deg, var(--success), #229954);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 30px;
+            display: inline-block;
+            margin: 15px 0;
+            font-weight: 600;
+            box-shadow: 0 8px 25px rgba(39, 174, 96, 0.3);
+        }
+
+        .detection-info {
+            background: white;
+            padding: 35px;
+            border-radius: 20px;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border: 2px solid var(--accent);
+        }
+
+        .mapping-section {
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+            padding: 35px;
+            border-radius: 20px;
+            margin: 30px 0;
+            border: 2px solid var(--warning);
+        }
+
+        .mapping-item {
+            background: white;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 12px;
+            border-left: 6px solid var(--secondary);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+
+        .run-audit-section {
+            text-align: center;
+            margin: 50px 0;
+            padding: 50px;
+            background: linear-gradient(135deg, var(--secondary), #b31900);
+            color: white;
+            border-radius: 25px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .run-audit-section::before {
+            content: '';
+            position: absolute;
+            top: -50px;
+            right: -50px;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .run-btn {
+            background: white;
+            color: var(--secondary);
+            border: none;
+            padding: 20px 60px;
+            font-size: 1.3em;
+            font-weight: 700;
+            border-radius: 35px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            letter-spacing: 0.5px;
+        }
+
+        .run-btn:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+            border-top: 5px solid var(--primary);
+        }
+
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .reasoning {
+            font-size: 0.9em;
+            color: var(--gray);
+            margin-top: 8px;
+            font-style: italic;
+        }
+
+        @media (max-width: 768px) {
+            .glass-container {
+                margin: 10px;
+                border-radius: 20px;
+            }
+            
+            .hero-section, .content-section {
+                padding: 30px 20px;
+            }
+            
+            .logo {
+                font-size: 2.5em;
+            }
+            
+            .run-audit-section {
+                padding: 30px 20px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="glass-container">
+        <div class="hero-section">
+            <div class="logo">
+                <i class="fas fa-heartbeat" style="color: #d81e05;"></i> FDK™ Health
+            </div>
+            <div class="page-title">Health Dataset Verification</div>
+        </div>
+
+        <div class="content-section">
+            <div class="filename-card">
+                <i class="fas fa-file-csv"></i> Dataset: {{ filename }}
+            </div>
+            
+            <div class="success-badge">
+                <i class="fas fa-check-circle"></i> Successfully uploaded and analyzed
+            </div>
+            
+            <div class="success-badge">
+                <i class="fas fa-robot"></i> Health Auto-Detection Successful!
+            </div>
+
+            <div class="detection-info">
+                <h3><i class="fas fa-search"></i> How Our Health Detection Works:</h3>
+                <p>Our system scans your dataset and intelligently identifies:</p>
+                <ul>
+                    <li><strong>Patient Groups:</strong> Demographic columns (ethnicity, gender, age groups, location)</li>
+                    <li><strong>Medical Outcomes:</strong> Binary diagnosis results (0/1, Yes/No, Positive/Negative)</li>
+                    <li><strong>Clinical Predictions:</strong> Algorithmic predictions and AI recommendations</li>
+                    <li><strong>Confidence Scores:</strong> Probability values between 0-1 (if available)</li>
+                </ul>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">{{ total_columns }}</div>
+                    <div>Total Columns</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ detected_key_features }}</div>
+                    <div>Key Features Selected</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">45</div>
+                    <div>Health Metrics</div>
+                </div>
+            </div>
+
+            <div class="mapping-section">
+                <h3><i class="fas fa-map-marked-alt"></i> Detected Health Column Mapping:</h3>
+                <p>Your health fairness audit will be based on these automatically selected features from <strong>{{ filename }}</strong>:</p>
+                
+                <div class="mapping-item">
+                    <strong>{{ suggested_mappings.group }}</strong>
+                    <div class="reasoning">→ Patient Groups for Fairness Analysis</div>
+                    <div class="reasoning"><em>{{ column_reasoning[suggested_mappings.group] }}</em></div>
+                </div>
+                
+                <div class="mapping-item">
+                    <strong>{{ suggested_mappings.y_true }}</strong>
+                    <div class="reasoning">→ Medical Outcomes & Diagnoses</div>
+                    <div class="reasoning"><em>{{ column_reasoning[suggested_mappings.y_true] }}</em></div>
+                </div>
+                
+                <div class="mapping-item">
+                    <strong>{{ suggested_mappings.y_pred }}</strong>
+                    <div class="reasoning">→ Clinical Predictions & AI Recommendations</div>
+                    <div class="reasoning"><em>{{ column_reasoning[suggested_mappings.y_pred] }}</em></div>
+                </div>
+                
+                {% if suggested_mappings.y_prob %}
+                <div class="mapping-item">
+                    <strong>{{ suggested_mappings.y_prob }}</strong>
+                    <div class="reasoning">→ Confidence Scores & Probability Values</div>
+                    <div class="reasoning"><em>{{ column_reasoning[suggested_mappings.y_prob] }}</em></div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="run-audit-section">
+                <h2><i class="fas fa-rocket"></i> Run Health Fairness Audit on {{ filename }}</h2>
+                <p>45 health fairness metrics will be analyzed using the detected column mapping from your uploaded dataset</p>
+                <p><em>Health Domain Coverage • Medical Fairness Standards • Automated Detection</em></p>
+                
+                <form action="{{ url_for('health.run_health_audit_with_mapping') }}" method="get">
+                    <input type="hidden" name="filename" value="{{ filename }}">
+                    <input type="hidden" name="group_col" value="{{ suggested_mappings.group }}">
+                    <input type="hidden" name="y_true_col" value="{{ suggested_mappings.y_true }}">
+                    <input type="hidden" name="y_pred_col" value="{{ suggested_mappings.y_pred }}">
+                    {% if suggested_mappings.y_prob %}
+                    <input type="hidden" name="y_prob_col" value="{{ suggested_mappings.y_prob }}">
+                    {% endif %}
+                    <button type="submit" class="run-btn">
+                        <i class="fas fa-play-circle"></i> RUN HEALTH FAIRNESS AUDIT
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
