@@ -1,7 +1,6 @@
 # ================================================================
 # FDK Health Pipeline - COMPREHENSIVE v4.0
 # 45 Comprehensive Healthcare Fairness Metrics
-# MIT License - AI Ethics Research Group
 # ================================================================
 
 import os
