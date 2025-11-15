@@ -1,6 +1,6 @@
 # ================================================================
 # FDK Governance Pipeline - PRODUCTION READY
-# 27 Governance Fairness Metrics - MIT Licensed
+# 27 Governance Fairness Metrics
 # ================================================================
 
 import pandas as pd
