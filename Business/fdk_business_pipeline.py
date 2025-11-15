@@ -1,6 +1,6 @@
 # ================================================================
 # FDK BUSINESS PIPELINE - PRODUCTION READY
-# 35 Business Fairness Metrics - Fully Implemented
+# 56 Business Fairness Metrics - Fully Implemented
 # Maintains backward compatibility with original function interface
 # ================================================================
 
@@ -15,7 +15,7 @@ import json
 import warnings
 warnings.filterwarnings('ignore')
 
-# Business-specific metrics configuration - 35 METRICS
+# Business-specific metrics configuration - 56 METRICS
 BUSINESS_METRICS_CONFIG = {
     'core_group_fairness': [
         'statistical_parity_difference', 'statistical_parity_ratio',
