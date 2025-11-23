@@ -1,73 +1,37 @@
-# ⚖️ Fairness Diagnostic  Kit (FDK™)
+# Fairness Diagnostic Kit (FDK™)
+Multi-Domain AI Fairness Audit Toolkit • Apache-2.0 Licensed  
+Developed by Hamid Tavakoli, Optics AI Ltd (2025)
 
-[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-blue.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
-[![GitHub Repository](https://img.shields.io/badge/GitHub-AI--Fairness--com%2FFDK--Toolkit-lightgrey?logo=github)](https://github.com/AI-Fairness-com/FDK-Toolkit)
+FDK™ is a multi-domain fairness auditing toolkit providing automated bias detection, 
+validation, and reporting for seven high-risk AI application areas:
 
+- Business  
+- Education  
+- Finance  
+- Health  
+- Hiring  
+- Justice  
+- Governance  
 
-**Open-source toolkit for fairness diagnostics across seven key AI domains.**  
-Developed to support the *Fairness Diagnostic Kit (FDK™)* framework described in the book  
-**_The Fairness Diagnostic Kit: Tools for Auditing, Education, and Governance of Responsible AI_** (Tavakoli, 2025).
-
----
-
-## 🌍 Overview
-
-The **FDK™ Toolkit** enables non-technical professionals, regulators, and educators to test and interpret algorithmic fairness **without coding**.  
-It offers *domain-specific APIs*, *automatic feature detection*, and *plain-language audit reports* in JSON and human-readable form.
-
-Each domain API operates through the [AI Fairness Portal](https://www.ai-fairness.com)  
-and can also be run locally for demonstration or research purposes.
-
----
-
-## 🧩 Supported Domains
-
-FDK™ currently supports seven domains, each with its own validated fairness metrics and pipelines:
-
-| Domain | Folder | Description |
-|:--|:--|:--|
-| Healthcare | `/healthcare/` | Fairness auditing for diagnostic and clinical decision-support models |
-| Finance | `/finance/` | Auditing for credit scoring, lending, and insurance models |
-| Hiring | `/hiring/` | Detection of demographic and procedural bias in recruitment pipelines |
-| Education | `/education/` | Fairness testing of grading, admissions, and adaptive learning systems |
-| Justice | `/justice/` | Evaluation of algorithmic fairness in risk assessment and sentencing tools |
-| Environment | `/environment/` | Fairness and sustainability diagnostics for environmental and resource models |
-| General / Business | `/general/` | For multi-domain and mixed datasets |
+The design and methodology of FDK™ are fully documented in the 
+“Fairness Diagnostic Kit (FDK™)” book (2025), including domain theory, 
+metric definitions, fairness taxonomies, and end-to-end audit workflows.
 
 ---
 
-## ⚙️ Repository Structure
+## 🚀 Key Features
 
-Each domain folder includes: 
-## 🧩 Repository Structure
-Each domain folder includes:
-- Python pipeline (.py)
-- HTML interface (.html)
-- Example synthetic dataset (.csv)
-- Human-readable summary (.txt)
-- JSON output (.json)
-
----
-
-## 📚 Citation and Credits
-If you use or reference this toolkit in your research, please cite:
-
-**Tavakoli, H.** (2025). *The Fairness Diagnostic Kit (FDK™): Tools for Auditing, Education, and Governance of Responsible AI.* London: Apress.
-
-**Repository:** [AI-Fairness-com/FDK-Toolkit](https://github.com/AI-Fairness-com/FDK-Toolkit)  
-**Correspondence:** [info@ai-fairness.com](mailto:info@ai-fairness.com)
+- Automated dataset validation and domain detection  
+- Domain-specific fairness pipelines (36–56 metrics depending on domain)  
+- Unified audit JSON reports + human-readable natural-language summaries  
+- Multi-modal fairness metrics: group, error, calibration, drift, distributional, 
+  business/justice/health-specific indices  
+- One-click no-code web interface (Flask + Render deployment)  
+- Automated column mapping (group, outcome, prediction, probability)  
+- Downloadable audit reports for compliance and documentation  
+- Full Apache-2.0 licence for open research and community extension  
 
 ---
 
-### 📖 BibTeX
-```bibtex
-@book{Tavakoli2025FDK,
-  author    = {Hamid Tavakoli},
-  title     = {The Fairness Diagnostic Kit (FDK™): Tools for Auditing, Education, and Governance of Responsible AI},
-  year      = {2025},
-  publisher = {Apress},
-  address   = {London},
-  url       = {https://github.com/AI-Fairness-com/FDK-Toolkit}
-}
-
+## 📁 Repository Structure
 
