@@ -95,21 +95,59 @@ Top-level structure:
 ```text
 FDK-Toolkit/
 │
-├── Business/
-├── Education/
-├── Finance/
-├── Health/
-├── Hiring/
-├── Justice/
-├── Governance/
+├── docs/                           # Comprehensive documentation
+│   ├── installation.md            # Step-by-step installation guide
+│   ├── architecture.md            # System architecture details
+│   ├── domains.md                 # Domain-specific explanations
+│   ├── example_usage.md           # Practical usage examples
+│   └── disclaimer.md              # Legal and ethical guidelines
 │
-├── app.py
-├── requirements.txt
-├── render.yaml
-├── .python-version
-├── LICENSE
-├── NOTICE
-└── README.md
+├── Business/                      # Business domain API
+│   ├── fdk_business_pipeline.py   # Core fairness pipeline
+│   ├── fdk_business.py            # Flask API routes
+│   ├── upload_business.html       # Web interface
+│   ├── auto_confirm_business.html # Column mapping confirmation
+│   └── result_business.html       # Results display
+│
+├── Education/                     # Education domain API
+│   ├── fdk_education_pipeline.py
+│   ├── fdk_education.py
+│   └── [corresponding HTML templates]
+│
+├── Finance/                       # Finance domain API  
+│   ├── fdk_finance_pipeline.py
+│   ├── fdk_finance.py
+│   └── [corresponding HTML templates]
+│
+├── Health/                        # Health domain API
+│   ├── fdk_health_pipeline.py
+│   ├── fdk_health.py
+│   └── [corresponding HTML templates]
+│
+├── Hiring/                        # Hiring domain API
+│   ├── fdk_hiring_pipeline.py
+│   ├── fdk_hiring.py
+│   └── [corresponding HTML templates]
+│
+├── Justice/                       # Justice domain API
+│   ├── fdk_justice_pipeline.py
+│   ├── fdk_justice.py
+│   └── [corresponding HTML templates]
+│
+├── Governance/                    # Governance domain API
+│   ├── fdk_governance_pipeline.py
+│   ├── fdk_governance.py
+│   └── [corresponding HTML templates]
+│
+├── app.py                         # Main Flask application
+├── requirements.txt               # Python dependencies
+├── render.yaml                    # Deployment configuration
+├── .python-version               # Python version specification
+├── LICENSE                       # Apache 2.0 License
+├── NOTICE                        # Copyright notices
+└── README.md                     # Project documentation
+
+
 🚀 Installation (Local Use)
 Requirements
 
