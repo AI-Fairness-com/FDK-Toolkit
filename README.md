@@ -19,10 +19,10 @@ Each domain API can be accessed through the AI Fairness Portal or run locally fo
 ---
 
 ## 🏗️ System Architecture
-[ARCHITECTURE_DIAGRAM_PLACEHOLDER - Professional PNG diagram will be inserted here]
+
 Diagram: User Upload (CSV) → Automatic Column Detection → Domain-Specific Pipeline → Fairness Metrics Calculation → JSON & Human-Readable Report.
 
-<img width="419" height="369" alt="Screenshot 2025-11-24 at 12 32 01" src="https://github.com/user-attachments/assets/b00ad2bf-e0c9-453e-9d31-9be0fb344f85" />
+<img width="419" height="369" alt="FDK Architecture" src="https://github.com/user-attachments/assets/b00ad2bf-e0c9-453e-9d31-9be0fb344f85" />
 
 ## 📊 Core Fairness Metrics
 
