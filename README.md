@@ -1,4 +1,3 @@
-
 # ⚖️ Fairness Diagnostic Kit (FDK™)
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-green.svg)](https://www.apache.org/licenses/LICENSE-2.0)
@@ -21,9 +20,11 @@ Each domain API can be accessed through the AI Fairness Portal or run locally fo
 
 ## 🏗️ System Architecture
 [ARCHITECTURE_DIAGRAM_PLACEHOLDER - Professional PNG diagram will be inserted here]
-Diagram: User Upload (CSV) → Automatic Column Detection → Domain-Specific Pipeline → Fairness Metrics Calculation → JSON & Human-Readable Report
+Diagram: User Upload (CSV) → Automatic Column Detection → Domain-Specific Pipeline → Fairness Metrics Calculation → JSON & Human-Readable Report.
 
-<img width="547" height="436" alt="Screenshot 2025-11-24 at 11 59 54" src="https://github.com/user-attachments/assets/22fa5e32-3f88-417f-ac7e-e9a80a1f882d" />
+<img width="419" height="369" alt="Screenshot 2025-11-24 at 12 32 01" src="https://github.com/user-attachments/assets/b00ad2bf-e0c9-453e-9d31-9be0fb344f85" />
+
+
 
 
 ## 📊 Core Fairness Metrics
@@ -146,8 +147,6 @@ FDK-Toolkit/
 ├── LICENSE                       # Apache 2.0 License
 ├── NOTICE                        # Copyright notices
 └── README.md                     # Project documentation
-
-
 🚀 Installation (Local Use)
 Requirements
 
