@@ -16,46 +16,67 @@ This guide explains how to install, configure, and run the toolkit on your local
 
 ## 🖥️ System Requirements
 
-### Python version
-
+### Python Version
 FDK™ requires:
-
 ```text
 Python 3.10.x
 The repository includes a .python-version file specifying 3.10.13.
-Supported operating systems
+
+Supported Operating Systems
 macOS
+
 Linux
+
 Windows (with Python installed)
-Required Python packages
-FDK™ depends on the packages listed in:
-requirements.txt
-These include:
+
+Required Python Packages
+FDK™ depends on the packages listed in requirements.txt:
+
 Flask
+
 Flask-CORS
+
 Flask-Session
+
 NumPy
+
 Pandas
+
 scikit-learn
+
 SciPy
-📁 Cloning the repository
+
+📁 Cloning the Repository
 Open a terminal and run:
+
+bash
 git clone https://github.com/AI-Fairness-com/FDK-Toolkit.git
 cd FDK-Toolkit
 You should now be inside the project directory.
-📦 Installing dependencies
+
+📦 Installing Dependencies
 Install all required Python packages using:
+
+bash
 pip install -r requirements.txt
 If multiple Python versions exist on your system, run:
+
+bash
 python3 -m pip install -r requirements.txt
-▶️ Running the toolkit
+▶️ Running the Toolkit
 To start the FDK™ application locally:
+
+bash
 python app.py
 Or, if necessary:
+
+bash
 python3 app.py
 The Flask server will start and expose all seven domain-specific UIs.
-🌐 Accessing domain upload interfaces
+
+🌐 Accessing Domain Upload Interfaces
 Once the server is running, open a browser and use:
+
 Domain	URL
 Business	/business-upload
 Education	/education-upload
@@ -65,37 +86,61 @@ Hiring	/hiring-upload
 Justice	/justice-upload
 Governance	/governance-upload
 Each interface provides:
+
 CSV upload
+
 Automatic column detection
+
 Mapping confirmation
+
 Domain-specific fairness audit
+
 JSON report download
+
 Plain-language summary
-🧾 Dataset requirements
+
+🧾 Dataset Requirements
 Your dataset must:
+
 Be provided as a CSV file
+
 Contain no personal identifiers (GDPR-compliant)
+
 Include the following columns:
+
 At least one sensitive group attribute
+
 Ground-truth outcome (y_true)
+
 Model prediction (y_pred)
+
 Optional probability scores (y_prob)
+
 FDK™ automatically identifies these features during upload.
-☁️ Optional: deploying on Render
+
+☁️ Optional: Deploying on Render
 The repository includes a render.yaml file which defines:
+
 Python version
+
 Install command
+
 Start command
+
 Render.com can use this file to build and deploy the app automatically.
+
 🛠️ Troubleshooting
-“ModuleNotFoundError: X”
-Re-install dependencies:
+"ModuleNotFoundError: X"
+
+bash
 pip install -r requirements.txt
 Application does not start
-Check that you are in the correct directory:
+
+bash
 cd FDK-Toolkit
 Python not recognised
-Use:
+
+bash
 python3 app.py
 ⚖️ Licence
 The FDK™ Toolkit source code is released under:
