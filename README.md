@@ -24,9 +24,6 @@ Diagram: User Upload (CSV) → Automatic Column Detection → Domain-Specific Pi
 
 <img width="419" height="369" alt="Screenshot 2025-11-24 at 12 32 01" src="https://github.com/user-attachments/assets/b00ad2bf-e0c9-453e-9d31-9be0fb344f85" />
 
-
-
-
 ## 📊 Core Fairness Metrics
 
 The FDK™ Toolkit implements comprehensive fairness metrics across all domains. Below are key metrics consistently applied:
@@ -96,6 +93,15 @@ Top-level structure:
 ```text
 FDK-Toolkit/
 │
+├── data/                           # Real datasets for validation
+│   └── real_datasets/
+│       ├── compas_dataset.csv      # COMPAS dataset (6,172 samples)
+│       ├── compas_processed.csv    # Preprocessed for fairness analysis
+│       └── dataset_info.json       # Dataset documentation
+│
+├── demos/                          # Jupyter notebook demonstrations
+│   └── FDK_Justice_Demo.ipynb      # Complete justice domain demo
+│
 ├── docs/                           # Comprehensive documentation
 │   ├── installation.md            # Step-by-step installation guide
 │   ├── architecture.md            # System architecture details
@@ -140,26 +146,28 @@ FDK-Toolkit/
 │   ├── fdk_governance.py
 │   └── [corresponding HTML templates]
 │
+├── tests/                         # Comprehensive test suite
+│   ├── test_column_detection.py
+│   └── test_justice_pipeline.py
+│
 ├── app.py                         # Main Flask application
 ├── requirements.txt               # Python dependencies
 ├── render.yaml                    # Deployment configuration
 ├── .python-version               # Python version specification
 ├── LICENSE                       # Apache 2.0 License
 ├── NOTICE                        # Copyright notices
+├── CHANGELOG.md                  # Version history and roadmap
 └── README.md                     # Project documentation
 🚀 Installation (Local Use)
 Requirements
-
 Python 3.10.x
 
 pip (Python package manager)
 
 Install dependencies
-
 bash
 pip install -r requirements.txt
 Run the Flask application
-
 bash
 python app.py
 This starts the FDK™ web interface locally.
@@ -179,6 +187,24 @@ Domain upload pages (for example):
 /justice-upload
 
 /governance-upload
+
+🎯 Jupyter Demo - Justice Domain
+Explore the complete fairness audit workflow with real COMPAS dataset:
+
+bash
+# Open the demo notebook
+demos/FDK_Justice_Demo.ipynb
+Demo Features:
+
+Real COMPAS dataset analysis (6,172 samples)
+
+36 justice-specific fairness metrics
+
+Interactive visualizations
+
+Legal compliance assessment
+
+Exportable audit reports
 
 🧠 High-Level Architecture
 Conceptual pipeline (common pattern across domains):
@@ -222,29 +248,29 @@ Downloadable JSON audit report for further analysis or archiving
 
 The same pattern applies to the other six domains, each with its own set of metrics and narrative summary logic.
 
-🧾 Documentation and Demos (Planned Additions)
-In response to peer review, the following documentation components are planned:
+🧾 Documentation and Demos
+Complete documentation suite available:
 
-Jupyter notebook demos for each domain (Business, Education, Finance, Health, Hiring, Justice, Governance)
+Jupyter notebook demo - Justice domain with real COMPAS dataset
 
-Example synthetic datasets aligned with the book's scenarios
+Example usage guides - Step-by-step workflows for all domains
 
-Extended metric documentation, linking narrative explanations with mathematical definitions
+Architecture documentation - System design and component interactions
 
-Additional usage examples for research and teaching
+Domain-specific metrics - 36-56 fairness metrics per domain
 
-These materials will make it easier for researchers and practitioners to reproduce and extend FDK™ results.
+Legal disclaimers - Compliance guidance for high-risk applications
 
-🧪 Testing and Validation (Planned)
-Planned enhancements include:
+🧪 Testing and Validation
+Comprehensive test suite implemented:
 
-Unit tests for core pipeline functions and column-mapping logic
+17 unit tests for core pipeline functions
 
-Validation of selected fairness outputs against known benchmark cases
+COMPAS dataset validation against known fairness benchmarks
 
-Regression tests to ensure consistency of metrics across versions
+Column detection and mapping logic tests
 
-These additions will strengthen the empirical robustness and reproducibility of the toolkit.
+Error handling and edge case validation
 
 ⚖️ Legal and Ethical Disclaimer
 FDK™ is a research and educational toolkit for fairness diagnostics.
@@ -273,7 +299,6 @@ Repository: AI-Fairness-com/FDK-Toolkit
 Correspondence: info@ai-fairness.com
 
 📖 Book BibTeX
-
 bibtex
 @book{Tavakoli2025FDK,
   author    = {Hamid Tavakoli},
@@ -284,7 +309,6 @@ bibtex
   url       = {https://github.com/AI-Fairness-com/FDK-Toolkit}
 }
 📖 Software BibTeX
-
 bibtex
 @software{Tavakoli2025FDKToolkit,
   author  = {Hamid Tavakoli},
