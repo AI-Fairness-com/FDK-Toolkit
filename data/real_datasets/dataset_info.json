@@ -1,0 +1,17 @@
+{
+  "compas_dataset": {
+    "source": "ProPublica COMPAS Analysis",
+    "url": "https://github.com/propublica/compas-analysis",
+    "samples": 6172,
+    "groups": {
+      "African-American": 3175,
+      "Caucasian": 2103,
+      "Hispanic": 509,
+      "Other": 343,
+      "Asian": 31,
+      "Native American": 11
+    },
+    "description": "Real-world recidivism risk assessment data for fairness validation",
+    "citation": "Larson, J., et al. (2016). How We Analyzed the COMPAS Recidivism Algorithm"
+  }
+}
