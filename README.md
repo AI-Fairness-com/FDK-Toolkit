@@ -1,8 +1,8 @@
 # ⚖️ Fairness Diagnostic  Kit (FDK™)
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-green.svg)](https://www.apache.org/licenses/LICENSE-2.0)
-(https://creativecommons.org/licenses/by-nc-sa/4.0/)
 [![GitHub Repository](https://img.shields.io/badge/GitHub-AI--Fairness--com%2FFDK--Toolkit-lightgrey?logo=github)](https://github.com/AI-Fairness-com/FDK-Toolkit)
+
 
 
 **Open-source toolkit for fairness diagnostics across seven key AI domains.**  
