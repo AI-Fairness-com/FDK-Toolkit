@@ -53,6 +53,45 @@ Composite Bias Score: 0.1793
 
 Severity: HIGH_BIAS
 
+📊 Real Dataset Integration
+Justice Domain with COMPAS Dataset
+python
+# Load and analyze real COMPAS dataset
+from Justice.compas_loader import load_compas_data
+from fdk_justice_pipeline import run_pipeline
+
+# Load real COMPAS data (6,172 samples)
+df = load_compas_data()
+
+# Run comprehensive fairness audit
+results = run_pipeline(df)
+
+print(f"Composite Bias Score: {results['summary']['composite_bias_score']:.4f}")
+print(f"Assessment: {results['summary']['overall_assessment']}")
+Dataset Information
+COMPAS Dataset: 6,172 real-world recidivism risk assessment records
+
+Source: ProPublica COMPAS Analysis
+
+Use Case: Justice domain fairness validation
+
+Features: Demographic groups, true outcomes, model predictions
+
+Jupyter Demo
+Access the complete analysis in: demos/FDK_Justice_Demo.ipynb
+
+The demo includes:
+
+Real COMPAS dataset loading and preprocessing
+
+36 justice-specific fairness metrics
+
+Interactive visualizations
+
+Legal compliance assessment
+
+Exportable audit reports
+
 1️⃣ Business Domain — Example Workflow
 📁 Uploading the dataset
 Navigate to:
