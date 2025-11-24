@@ -1,20 +1,34 @@
-📦 FDK™ Installation Guide
-A complete installation guide for running the Fairness Diagnostic Kit (FDK™) locally for research, teaching, and fairness auditing demonstrations.
-This document follows the same structural and design style as the FDK™ repository README.
-🌍 Overview
-FDK™ provides domain-specific fairness diagnostics for seven high-impact AI application areas.
+# 📙 FDK™ Installation Guide
+
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-green.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+
+A complete installation guide for running the **Fairness Diagnostic Kit (FDK™)** locally for research, teaching, and fairness auditing demonstrations.  
+This document follows the same style and layout as the main repository README.
+
+---
+
+## 🌍 Overview
+
+The **FDK™ Toolkit** provides domain-specific fairness diagnostics for seven key AI application areas.  
 This guide explains how to install, configure, and run the toolkit on your local machine using Python and Flask.
-🖥️ System Requirements
-Python Version
+
+---
+
+## 🖥️ System Requirements
+
+### Python version
+
 FDK™ requires:
+
+```text
 Python 3.10.x
 The repository includes a .python-version file specifying 3.10.13.
-Supported Operating Systems
+Supported operating systems
 macOS
 Linux
-Windows (with Python properly installed)
-Required Python Packages
-All runtime dependencies are listed in:
+Windows (with Python installed)
+Required Python packages
+FDK™ depends on the packages listed in:
 requirements.txt
 These include:
 Flask
@@ -24,24 +38,24 @@ NumPy
 Pandas
 scikit-learn
 SciPy
-📁 Cloning the Repository
+📁 Cloning the repository
 Open a terminal and run:
 git clone https://github.com/AI-Fairness-com/FDK-Toolkit.git
 cd FDK-Toolkit
-This places you inside the project directory.
-📦 Installing Dependencies
-Install required Python dependencies with:
+You should now be inside the project directory.
+📦 Installing dependencies
+Install all required Python packages using:
 pip install -r requirements.txt
-If you have multiple Python versions installed, use:
+If multiple Python versions exist on your system, run:
 python3 -m pip install -r requirements.txt
-▶️ Running the Toolkit
+▶️ Running the toolkit
 To start the FDK™ application locally:
 python app.py
-Or if Python 3 is required explicitly:
+Or, if necessary:
 python3 app.py
-This launches the Flask service containing all seven domain-specific UIs.
-🌐 Accessing Domain Audit Interfaces
-Once the server is running, access the following endpoints in any browser:
+The Flask server will start and expose all seven domain-specific UIs.
+🌐 Accessing domain upload interfaces
+Once the server is running, open a browser and use:
 Domain	URL
 Business	/business-upload
 Education	/education-upload
@@ -50,35 +64,35 @@ Health	/health-upload
 Hiring	/hiring-upload
 Justice	/justice-upload
 Governance	/governance-upload
-Each endpoint provides:
-CSV upload form
-Auto-detected mapping review
-Fairness audit execution
+Each interface provides:
+CSV upload
+Automatic column detection
+Mapping confirmation
+Domain-specific fairness audit
 JSON report download
-Human-readable summary
-🧾 Dataset Requirements
-Your dataset must follow these rules:
-Be in CSV format
-Contain no personal identifiers (GDPR-safe)
-Include:
+Plain-language summary
+🧾 Dataset requirements
+Your dataset must:
+Be provided as a CSV file
+Contain no personal identifiers (GDPR-compliant)
+Include the following columns:
 At least one sensitive group attribute
-A ground-truth outcome column (y_true)
-A prediction column (y_pred)
+Ground-truth outcome (y_true)
+Model prediction (y_pred)
 Optional probability scores (y_prob)
-FDK™ automatically detects these during upload.
-☁️ Optional: Deploying on Render
-A render.yaml file is provided for single-click deployment.
-It defines:
+FDK™ automatically identifies these features during upload.
+☁️ Optional: deploying on Render
+The repository includes a render.yaml file which defines:
 Python version
 Install command
 Start command
-Render.com will automatically build and deploy the application based on this configuration.
+Render.com can use this file to build and deploy the app automatically.
 🛠️ Troubleshooting
-ModuleNotFoundError
-Run:
+“ModuleNotFoundError: X”
+Re-install dependencies:
 pip install -r requirements.txt
-App not starting
-Ensure you are inside the main directory:
+Application does not start
+Check that you are in the correct directory:
 cd FDK-Toolkit
 Python not recognised
 Use:
@@ -86,7 +100,9 @@ python3 app.py
 ⚖️ Licence
 The FDK™ Toolkit source code is released under:
 Apache License 2.0
+
 See LICENSE and NOTICE in the repository root.
+
 📬 Contact
-For academic or technical queries:
+For academic or technical enquiries:
 info@ai-fairness.com
