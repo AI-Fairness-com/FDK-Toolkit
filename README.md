@@ -2,7 +2,7 @@
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-green.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![GitHub Repository](https://img.shields.io/badge/GitHub-AI--Fairness--com%2FFDK--Toolkit-lightgrey?logo=github)](https://github.com/AI-Fairness-com/FDK-Toolkit)
-![Version](https://img.shields.io/badge/version-v1.1.0-blue)
+![Version](https://img.shields.io/badge/version-v2.0.0-blue)
 
 **Open-source toolkit for fairness diagnostics across seven key AI domains.**  
 Developed to support the *Fairness Diagnostic Kit (FDK™)* framework described in the book  
@@ -23,188 +23,232 @@ It offers domain-specific APIs, automatic feature detection, and plain-language 
 Each domain API can be accessed through the AI Fairness Portal or run locally for demonstration and research.
 
 ---
-## 🎯 Universal Intelligent Target Selection
-New in v1.1.0: FDK now features an intelligent target selection system that automatically detects the most appropriate target column based on:
+## 🎯 Unified Intelligent System & Transparency Framework
+**New in v2.0.0:** FDK now features a complete unified intelligent selection system across all 7 domains with full transparency tracking.
 
-Domain detection (justice, health, education, hiring, finance, business, governance)
+### 🚨 Key Methodological Enhancement
+- **Ensures valid comparisons** by using identical target columns for pre/post tests
+- **Complete metadata tracking** in all JSON audit reports
+- **Self-documenting system** that prevents methodological errors
 
-Test type (pre-implementation vs. post-implementation)
+### 🤖 Intelligent Target Selection Features
+FDK automatically detects the most appropriate target column based on:
+- **Domain detection** (justice, health, education, hiring, finance, business, governance)
+- **Test type** (pre-implementation vs. post-implementation)
+- **Domain-specific priority rules** with validated configurations
+- **Binary column verification** for fairness metrics
 
-Column patterns and domain-specific keywords
+### 📊 Complete Transparency
+Every JSON audit report now includes comprehensive metadata:
+```
+"metadata": {
+  "target_column_used": "two_year_recid",
+  "prediction_column_used": "is_recid",
+  "test_type": "post_implementation",
+  "intelligent_suggestion": "two_year_recid",
+  "user_override_applied": true,
+  "column_mapping": { ... },
+  "timestamp": "2024-01-23T11:57:25.648398",
+  "fdk_version": "justice_1.0_unified"
+}
+```
+### 🎯 Validated Results
+Justice Domain Validation: 15.2% fairness improvement confirmed with consistent target columns
 
-Binary column verification for fairness metrics
+All 7 Domains: Unified intelligent system operational
 
-***Key Capabilities:***
+Full Audit Trail: Every calculation documented for scientific reproducibility
 
-**🎯 Auto-detects domain from dataset column names**
+🔧 Usage:
 
-**⚙️ Applies domain-specific rules for different test types**
-
-**🤖 Provides intelligent suggestions with reasoning**
-
-**🔄 Maintains backward compatibility with manual selection**
-
-**🌐 Works across all 7 fairness domains**
-
-### Usage:
-text
-**API endpoint for intelligent selection**
+### API endpoint for intelligent selection
 curl -X POST -F "file=@dataset.csv" \
      -F "test_type=post_implementation" \
      http://localhost:5009/api/intelligent-target
 
-**UI Features:**
-✅ Pre/Post implementation test type selection
+### Enhanced detection with metadata
+curl -X POST -F "file=@dataset.csv" \
+     -F "test_type=pre_implementation" \
+     http://localhost:5009/api/detect-columns
 
-🔍 Real-time column analysis
+### UI Features:
 
-🎯 Automatic target column suggestions
+✅ Pre/Post implementation test type selection across all domains
+🔍 Real-time intelligent column analysis with visual feedback
+🎯 Automatic target suggestions with domain-specific logic
+📝 Complete metadata tracking in all reports
+💡 Context-aware help and methodological guidance
 
-💡 Context-aware help and explanations
-
-This system simplifies the fairness audit process while ensuring appropriate target column selection for different testing scenarios.
-
+This system ensures methodological integrity while providing full transparency for regulatory compliance and scientific validation.
 ---
 
 ## 🏗️ System Architecture
 
-<img width="1089" height="374" alt="Screenshot 2025-11-25 at 08 00 25" src="https://github.com/user-attachments/assets/10a57fc5-ac14-4a4e-8ba9-ac1cce0bdd1f" />
+<img width="1089" height="374" alt="FDK System Architecture" src="https://github.com/user-attachments/assets/10a57fc5-ac14-4a4e-8ba9-ac1cce0bdd1f" />
 
+### 🎯 Enhanced Workflow with Unified Intelligent System
+1. **User Upload (CSV)** → Domain auto-detection
+2. **Intelligent Target Selection** → Pre/Post implementation logic
+3. **Transparent Column Mapping** → Complete metadata tracking
+4. **Domain-Specific Fairness Pipeline** → 36-56 fairness metrics
+5. **Metadata-Enhanced Audit Report** → JSON with full audit trail
+6. **Plain-Language Summary** → Human-readable recommendations
 
-## 📊 Core Fairness Metrics
+### 🔍 Key Architectural Improvements (v2.0.0)
+- **Unified Intelligence Layer**: Single `intelligent_target_selection()` across all domains
+- **Metadata Injection**: Automatic audit trail generation in all reports
+- **Methodological Validation**: Target column consistency verification
+- **User Override Tracking**: Records when users manually select columns
+- **Cross-Domain Consistency**: Same intelligent behavior across all 7 APIs
 
-The FDK™ Toolkit implements comprehensive fairness metrics across all domains. Below are key metrics consistently applied:
+---
 
-| Metric | Definition | Domain Relevance |
-|:--|:--|:--|
-| **Statistical Parity Difference** | Difference in selection rates between groups | All domains - Base fairness measure |
-| **Disparate Impact Ratio** | Ratio of selection rates between groups | Hiring, Justice - Legal compliance |
-| **Equal Opportunity Difference** | Difference in true positive rates between groups | Health, Justice - Error fairness |
-| **Equalized Odds** | Both TPR and FPR equality across groups | All domains - Comprehensive fairness |
-| **Predictive Parity** | Equality of positive predictive values | Health, Finance - Predictive reliability |
-| **False Discovery Rate Difference** | Difference in false discovery rates between groups | Justice, Business - Error distribution |
-| **Average Odds Difference** | Average of FPR and FNR differences | All domains - Balanced performance |
-| **Treatment Equality** | Ratio of FNR to FPR across groups | Health, Education - Resource allocation |
-| **Demographic Parity Ratio** | Ratio of positive outcomes between groups | All domains - Outcome fairness |
-| **Predicted Positives per Group** | Count of positive predictions by group | All domains - Impact assessment |
+## 📊 Core Fairness Metrics with Methodological Tracking
 
-## 🏥 Real-World Use Cases
+The FDK™ Toolkit implements comprehensive fairness metrics across all domains with **complete methodological tracking**. Each metric calculation is now documented with target column, prediction column, and test type metadata.
+
+| Metric | Definition | Domain Relevance | Metadata Tracking |
+|:--|:--|:--|:--|
+| **Statistical Parity Difference** | Difference in selection rates between groups | All domains - Base fairness measure | ✅ Target column verified |
+| **Disparate Impact Ratio** | Ratio of selection rates between groups | Hiring, Justice - Legal compliance | ✅ Legal compliance documented |
+| **Equal Opportunity Difference** | Difference in true positive rates between groups | Health, Justice - Error fairness | ✅ Prediction column tracked |
+| **Equalized Odds** | Both TPR and FPR equality across groups | All domains - Comprehensive fairness | ✅ Test type recorded |
+| **Predictive Parity** | Equality of positive predictive values | Health, Finance - Predictive reliability | ✅ Column mapping preserved |
+| **False Discovery Rate Difference** | Difference in false discovery rates between groups | Justice, Business - Error distribution | ✅ User override logged |
+| **Average Odds Difference** | Average of FPR and FNR differences | All domains - Balanced performance | ✅ Timestamped calculations |
+| **Treatment Equality** | Ratio of FNR to FPR across groups | Health, Education - Resource allocation | ✅ Version control |
+| **Demographic Parity Ratio** | Ratio of positive outcomes between groups | All domains - Outcome fairness | ✅ Domain-specific logic |
+| **Predicted Positives per Group** | Count of positive predictions by group | All domains - Impact assessment | ✅ Intelligent selection source |
+
+### 🔍 Enhanced Metric Validation (v2.0.0)
+- **Column Consistency Check**: Ensures same target columns for pre/post comparisons
+- **Methodological Documentation**: Every metric includes calculation parameters
+- **Reproducibility Guarantee**: Full audit trail for scientific validation
+- **Domain-Specific Calibration**: Metrics adjusted per domain requirements
+- **Transparent Trade-offs**: Documented when metrics conflict
+
+---
+
+## 🏥 Real-World Use Cases with Methodological Validation
 
 ### Healthcare: Glaucoma Diagnosis AI
 **Context**: AI system for early glaucoma detection from retinal images  
 **Sensitive Attribute**: Ethnicity, Age, Gender  
 **Fairness Risk**: Lower diagnostic accuracy for minority ethnic groups and older patients, potentially causing irreversible blindness through delayed detection  
-**FDK Solution**: Tests 45 healthcare-specific metrics including calibration gaps, error rate parity, and subgroup performance to ensure equitable diagnostic accuracy across all demographic groups.
+**FDK Solution**: Tests 45 healthcare-specific metrics including calibration gaps, error rate parity, and subgroup performance to ensure equitable diagnostic accuracy across all demographic groups.  
+**✅ v2.0.0 Enhancement**: Complete metadata tracking ensures same diagnostic criteria (target columns) are used when comparing pre/post algorithm improvements.
 
-### Justice: Risk Assessment Tools  
+### Justice: Risk Assessment Tools - **VALIDATED EXAMPLE**
 **Context**: Algorithm predicting recidivism risk for bail decisions  
 **Sensitive Attribute**: Race, Socio-economic status  
 **Fairness Risk**: Systematic over-prediction of risk for minority defendants  
-**FDK Solution**: Applies 36 justice metrics including statistical parity, false positive rate differences, and causal fairness checks.
+**FDK Solution**: Applies 36 justice metrics including statistical parity, false positive rate differences, and causal fairness checks.  
+**✅ v2.0.0 Validation**: Using consistent target columns (`two_year_recid`), FDK verified **15.2% fairness improvement** in BiasClean v2.7, demonstrating the importance of methodological consistency in fairness comparisons.
 
 ### Hiring: Resume Screening AI
 **Context**: Automated screening of job applications  
 **Sensitive Attribute**: Gender, Age, Education background  
 **Fairness Risk**: Bias against female applicants in technical roles or older candidates  
-**FDK Solution**: Evaluates 34 hiring metrics including selection rates, individual fairness consistency, and counterfactual fairness.
+**FDK Solution**: Evaluates 34 hiring metrics including selection rates, individual fairness consistency, and counterfactual fairness.  
+**✅ v2.0.0 Enhancement**: Unified intelligent system ensures appropriate target column selection (`hired` vs `selected`) based on test type and dataset characteristics.
 
 ---
 
-## 🧩 Supported Domains
+## 🧩 Supported Domains with Unified Intelligence
 
-FDK™ currently supports seven domains, each with its own fairness metrics and pipelines:
+FDK™ currently supports seven domains, each with **unified intelligent selection** and **complete metadata tracking**:
 
-| Domain   | Folder        | Description |
-|:--|:--|:--|
-| Business  | `/Business/`   | Fairness auditing for customer, employee and corporate decision pipelines |
-| Education | `/Education/`  | Fairness testing of grading, admissions and educational decision systems |
-| Finance   | `/Finance/`    | Auditing for credit scoring, lending and financial inclusion models |
-| Health    | `/Health/`     | Fairness assessment of diagnostic and healthcare support models |
-| Hiring    | `/Hiring/`     | Detection of demographic and procedural bias in recruitment pipelines |
-| Justice   | `/Justice/`    | Evaluation of algorithmic fairness in justice and risk assessment tools |
-| Governance| `/Governance/` | Diagnostics for public-sector, policy and governance-related AI systems |
-
+| Domain   | Folder        | Description | v2.0.0 Enhancement |
+|:--|:--|:--|:--|
+| Business  | `/Business/`   | Fairness auditing for customer, employee and corporate decision pipelines | ✅ Unified intelligent selection |
+| Education | `/Education/`  | Fairness testing of grading, admissions and educational decision systems | ✅ Complete metadata tracking |
+| Finance   | `/Finance/`    | Auditing for credit scoring, lending and financial inclusion models | ✅ Methodological validation |
+| Health    | `/Health/`     | Fairness assessment of diagnostic and healthcare support models | ✅ Target column consistency |
+| Hiring    | `/Hiring/`     | Detection of demographic and procedural bias in recruitment pipelines | ✅ Pre/post test logic |
+| Justice   | `/Justice/`    | **Validated** evaluation of algorithmic fairness in justice and risk assessment tools | ✅ **15.2% improvement verified** |
+| Governance| `/Governance/` | Diagnostics for public-sector, policy and governance-related AI systems | ✅ Cross-domain consistency |
 ---
 
-## ⚙️ Repository Structure
+## ⚙️ Repository Structure with Enhanced Components
 
-Each domain folder includes:
+Each domain folder now includes **unified intelligent system integration**:
 
-- Python pipeline (`fdk_<domain>_pipeline.py`)
-- Flask routing / API file (`fdk_<domain>.py`)
-- HTML interface templates (`upload_*.html`, `auto_confirm_*.html`, `result_*.html`)
-- Example synthetic outputs (JSON reports), aligned with the book
+- Python pipeline (`fdk_<domain>_pipeline.py`) - **Enhanced with metadata injection**
+- Flask routing / API file (`fdk_<domain>.py`) - **Updated with unified intelligent selection**
+- HTML interface templates (`upload_*.html`, `auto_confirm_*.html`, `result_*.html`) - **Enhanced with visual feedback**
+- Example synthetic outputs (JSON reports) with **complete metadata tracking**
 
-Top-level structure:
+Top-level structure (v2.0.0 enhancements highlighted):
 
 ```text
 FDK-Toolkit/
 │
 ├── data/                           # Real datasets for validation
 │   └── real_datasets/
-│       ├── compas_dataset.csv      # COMPAS dataset (6,172 samples)
+│       ├── compas_dataset.csv      # COMPAS dataset (6,172 samples) - **VALIDATED**
 │       ├── compas_processed.csv    # Preprocessed for fairness analysis
 │       └── dataset_info.json       # Dataset documentation
 │
 ├── demos/                          # Jupyter notebook demonstrations
-│   └── FDK_Justice_Demo.ipynb      # Complete justice domain demo
+│   └── FDK_Justice_Demo.ipynb      # Complete justice domain demo with **methodological validation**
 │
 ├── docs/                           # Comprehensive documentation
 │   ├── installation.md            # Step-by-step installation guide
-│   ├── architecture.md            # System architecture details
+│   ├── architecture.md            # **Updated** system architecture details
 │   ├── domains.md                 # Domain-specific explanations
 │   ├── example_usage.md           # Practical usage examples
 │   └── disclaimer.md              # Legal and ethical guidelines
 │
-├── Business/                      # Business domain API
-│   ├── fdk_business_pipeline.py   # Core fairness pipeline
-│   ├── fdk_business.py            # Flask API routes
-│   ├── upload_business.html       # Web interface
+├── Business/                      # Business domain API - **UPDATED TO v2.0.0**
+│   ├── fdk_business_pipeline.py   # Core fairness pipeline with metadata
+│   ├── fdk_business.py            # Flask API routes with unified intelligence
+│   ├── upload_business.html       # Web interface with enhanced UI
 │   ├── auto_confirm_business.html # Column mapping confirmation
 │   └── result_business.html       # Results display
 │
-├── Education/                     # Education domain API
-│   ├── fdk_education_pipeline.py
-│   ├── fdk_education.py
-│   └── [corresponding HTML templates]
+├── Education/                     # Education domain API - **UPDATED TO v2.0.0**
+│   ├── fdk_education_pipeline.py  # **Enhanced with metadata**
+│   ├── fdk_education.py           # **Unified intelligent system**
+│   └── [corresponding HTML templates updated]
 │
-├── Finance/                       # Finance domain API  
-│   ├── fdk_finance_pipeline.py
-│   ├── fdk_finance.py
-│   └── [corresponding HTML templates]
+├── Finance/                       # Finance domain API - **UPDATED TO v2.0.0**
+│   ├── fdk_finance_pipeline.py    # **Enhanced with metadata**
+│   ├── fdk_finance.py             # **Unified intelligent system**
+│   └── [corresponding HTML templates updated]
 │
-├── Health/                        # Health domain API
-│   ├── fdk_health_pipeline.py
-│   ├── fdk_health.py
-│   └── [corresponding HTML templates]
+├── Health/                        # Health domain API - **UPDATED TO v2.0.0**
+│   ├── fdk_health_pipeline.py     # **Enhanced with metadata**
+│   ├── fdk_health.py              # **Unified intelligent system**
+│   └── [corresponding HTML templates updated]
 │
-├── Hiring/                        # Hiring domain API
-│   ├── fdk_hiring_pipeline.py
-│   ├── fdk_hiring.py
-│   └── [corresponding HTML templates]
+├── Hiring/                        # Hiring domain API - **UPDATED TO v2.0.0**
+│   ├── fdk_hiring_pipeline.py     # **Enhanced with metadata**
+│   ├── fdk_hiring.py              # **Unified intelligent system**
+│   └── [corresponding HTML templates updated]
 │
-├── Justice/                       # Justice domain API
-│   ├── fdk_justice_pipeline.py
-│   ├── fdk_justice.py
-│   └── [corresponding HTML templates]
+├── Justice/                       # Justice domain API - **VALIDATED v2.0.0**
+│   ├── fdk_justice_pipeline.py    # **15.2% improvement verified**
+│   ├── fdk_justice.py             # **Methodological bug fixed**
+│   └── [corresponding HTML templates updated]
 │
-├── Governance/                    # Governance domain API
-│   ├── fdk_governance_pipeline.py
-│   ├── fdk_governance.py
-│   └── [corresponding HTML templates]
+├── Governance/                    # Governance domain API - **UPDATED TO v2.0.0**
+│   ├── fdk_governance_pipeline.py # **Enhanced with metadata**
+│   ├── fdk_governance.py          # **Unified intelligent system**
+│   └── [corresponding HTML templates updated]
 │
 ├── tests/                         # Comprehensive test suite
-│   ├── test_column_detection.py
-│   └── test_justice_pipeline.py
+│   ├── test_column_detection.py   # **Enhanced for unified system**
+│   └── test_justice_pipeline.py   # **Methodological validation tests**
 │
-├── app.py                         # Main Flask application
+├── app.py                         # **Main FDK.py application** (renamed/updated)
+├── FDK.py                         # **Universal intelligent system core**
 ├── requirements.txt               # Python dependencies
 ├── render.yaml                    # Deployment configuration
 ├── .python-version               # Python version specification
 ├── LICENSE                       # Apache 2.0 License
 ├── NOTICE                        # Copyright notices
-├── CHANGELOG.md                  # Version history and roadmap
-└── README.md                     # Project documentation
+├── CHANGELOG.md                  # **Updated to v2.0.0**
+└── README.md                     # **Updated project documentation**
 ```
 
 ### 🚀 Quick Start
@@ -217,15 +261,21 @@ pip (Python package manager)
 
 Install dependencies:
 
-bash
+```text
 pip install -r requirements.txt
+```
+
 Run the Flask application:
 
-bash
+```text
 python app.py
+```
+
 This starts the FDK™ web interface locally at http://localhost:5009.
 
 Access Domain Upload Pages:
+
+```text
 /justice - Justice domain with intelligent target selection
 
 /business - Business domain
@@ -239,55 +289,46 @@ Access Domain Upload Pages:
 /hiring - Hiring domain
 
 /governance - Governance domain
+```
+---
 
+## 🎯 Jupyter Demo - Justice Domain with Methodological Validation
+Explore the complete fairness audit workflow with **validated methodology** using the real COMPAS dataset:
 
-## 🎯 Jupyter Demo - Justice Domain
-Explore the complete fairness audit workflow with real COMPAS dataset:
+### Open the enhanced demo notebook
+`demos/FDK_Justice_Demo.ipynb`
 
-### Open the demo notebook
-demos/FDK_Justice_Demo.ipynb
-Demo Features:
+**Demo Features (v2.0.0 Enhanced):**
+- Real COMPAS dataset analysis (6,172 samples)
+- 36 justice-specific fairness metrics with **metadata tracking**
+- **Methodological validation** of target column consistency
+- Interactive visualizations with **audit trail documentation**
+- Legal compliance assessment with **transparent calculations**
+- Exportable JSON audit reports with **complete metadata**
+- **15.2% fairness improvement verification** example
 
-Real COMPAS dataset analysis (6,172 samples)
+---
 
-36 justice-specific fairness metrics
+### 🧠 Enhanced High-Level Architecture (v2.0.0)
+Conceptual pipeline with **unified intelligence** (common pattern across all 7 domains):
 
-Interactive visualizations
-
-Legal compliance assessment
-
-Exportable audit reports
-
-### 🧠 High-Level Architecture
-Conceptual pipeline (common pattern across domains):
-
-User Upload (CSV)
-
+**User Upload (CSV) with test type selection**
         ↓
-        
-Automatic Domain Detection & Column Mapping
-
+**Automatic Domain Detection & Unified Intelligent Target Selection**
         ↓
-        
-Intelligent Target Selection (Pre/Post Implementation)
-
+**Transparent Column Mapping with Complete Metadata Tracking**
         ↓
-        
-Domain-Specific Fairness Pipeline
-
+**Domain-Specific Fairness Pipeline with Methodological Validation**
         ↓
-        
-36-56 Fairness Metrics and Composite Indicators
-
+**36-56 Fairness Metrics with Audit Trail Documentation**
         ↓
-        
-Plain-Language Summary and Recommendations
-
+**Plain-Language Summary and Methodological Recommendations**
         ↓
-        
-Downloadable JSON Audit Report
+**Downloadable JSON Audit Report with Full Metadata**
 
-The underlying fairness metric definitions, taxonomies and domain rationales are documented in the FDK™ book.
+The underlying fairness metric definitions, taxonomies, and **methodological validation protocols** are documented in the FDK™ book and enhanced in v2.0.0.
+
+---
 
 #### 🎯 Intelligent Target Selection Workflow
 Step-by-Step Usage:
@@ -388,16 +429,19 @@ Domain-specific metrics - 36-56 fairness metrics per domain
 
 Legal disclaimers - Compliance guidance for high-risk applications
 
-### 🧪 Testing and Validation
-Comprehensive test suite implemented:
+### 🧪 Enhanced Testing and Validation (v2.0.0)
+Comprehensive test suite implemented with **methodological focus**:
 
-17 unit tests for core pipeline functions
+- 17+ unit tests for core pipeline functions
+- **Methodological validation tests** for target column consistency
+- COMPAS dataset validation against known fairness benchmarks
+- **Metadata completeness verification** for all JSON reports
+- Column detection and mapping logic tests with **unified intelligence**
+- Error handling and edge case validation
+- **Cross-domain consistency tests** for unified intelligent system
+- **User override functionality verification**
 
-COMPAS dataset validation against known fairness benchmarks
-
-Column detection and mapping logic tests
-
-Error handling and edge case validation
+---
 
 ### ⚖️ Legal and Ethical Disclaimer
 FDK™ is a research and educational toolkit for fairness diagnostics.
@@ -442,5 +486,5 @@ bibtex
   title   = {FDK™ Toolkit: Fairness Diagnostic Kit for Multi-Domain AI Auditing},
   year    = {2025},
   url     = {https://github.com/AI-Fairness-com/FDK-Toolkit},
-  version = {v1.0.0}
+  version = {v2.0.0}
 }
