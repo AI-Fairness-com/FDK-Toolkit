@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FDK Justice Fairness Audit</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #51748B; /* Justice Slate Blue */
+            --secondary: #F48120; /* Justice Orange */
+            --accent: #3498db;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --gray: #7f8c8d;
+            --gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--gradient);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .glass-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 25px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, var(--primary), #46667a);
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--secondary), var(--accent), #5f87a3);
+        }
+
+        .hero-section::after {
+            content: '';
+            position: absolute;
+            bottom: -50px;
+            right: -50px;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(244, 129, 32, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .logo {
+            font-size: 3.5em;
+            font-weight: 800;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #fff, #ecf0f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .domain-title {
+            font-size: 2.2em;
+            font-weight: 600;
+            margin-bottom: 20px;
+            opacity: 0.95;
+        }
+
+        .tagline {
+            font-size: 1.3em;
+            opacity: 0.9;
+            margin-bottom: 25px;
+            font-weight: 300;
+        }
+
+        .metrics-badge {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 30px;
+            font-size: 1.1em;
+            font-weight: 600;
+            display: inline-block;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .content-section {
+            padding: 50px 40px;
+        }
+
+        .description-card {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            padding: 40px;
+            border-radius: 20px;
+            margin-bottom: 50px;
+            border-left: 6px solid var(--secondary);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        }
+
+        .description-title {
+            color: var(--dark);
+            font-size: 1.6em;
+            margin-bottom: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .description-title i {
+            color: var(--secondary);
+            font-size: 1.2em;
+        }
+
+        .description-text {
+            color: var(--gray);
+            font-size: 1.1em;
+            line-height: 1.7;
+        }
+
+        .upload-section {
+            margin-bottom: 50px;
+        }
+
+        .upload-card {
+            background: white;
+            border-radius: 20px;
+            padding: 50px;
+            text-align: center;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+            border: 2px dashed var(--primary);
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(81, 116, 139, 0.05), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .upload-card:hover::before {
+            left: 100%;
+        }
+
+        .upload-card:hover {
+            transform: translateY(-8px);
+            border-color: var(--secondary);
+            box-shadow: 0 25px 50px rgba(81, 116, 139, 0.2);
+        }
+
+        .upload-icon {
+            font-size: 5em;
+            color: var(--primary);
+            margin-bottom: 25px;
+            display: block;
+            transition: all 0.3s ease;
+        }
+
+        .upload-card:hover .upload-icon {
+            color: var(--secondary);
+            transform: scale(1.1);
+        }
+
+        .upload-title {
+            color: var(--dark);
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .upload-subtitle {
+            color: var(--gray);
+            font-size: 1.1em;
+            margin-bottom: 30px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            margin: 25px 0;
+        }
+
+        .file-input {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-input-label {
+            display: inline-block;
+            padding: 18px 35px;
+            background: linear-gradient(135deg, var(--primary), #46667a);
+            color: white;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(81, 116, 139, 0.4);
+            font-size: 1.1em;
+        }
+
+        .file-input-label:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(81, 116, 139, 0.6);
+            background: linear-gradient(135deg, #46667a, var(--primary));
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, var(--secondary), #e6740e);
+            color: white;
+            border: none;
+            padding: 20px 60px;
+            font-size: 1.3em;
+            font-weight: 600;
+            border-radius: 35px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(244, 129, 32, 0.4);
+            letter-spacing: 0.5px;
+            margin-top: 20px;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 15px 35px rgba(244, 129, 32, 0.6);
+            background: linear-gradient(135deg, #e6740e, var(--secondary));
+        }
+
+        .features-section {
+            margin: 60px 0;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 30px;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 40px 30px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            border-top: 5px solid var(--primary);
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+
+        .feature-icon {
+            font-size: 3em;
+            margin-bottom: 25px;
+            color: var(--primary);
+            display: block;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover .feature-icon {
+            color: var(--secondary);
+            transform: scale(1.1);
+        }
+
+        .feature-title {
+            color: var(--dark);
+            font-size: 1.4em;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .feature-description {
+            color: var(--gray);
+            line-height: 1.6;
+        }
+
+        .legal-section {
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+            border: 1px solid var(--warning);
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 50px;
+            position: relative;
+            border-left: 6px solid var(--warning);
+        }
+
+        .legal-icon {
+            position: absolute;
+            top: -15px;
+            left: 30px;
+            background: white;
+            padding: 10px;
+            border-radius: 50%;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            color: var(--warning);
+        }
+
+        .legal-content {
+            margin-left: 50px;
+        }
+
+        .legal-title {
+            color: #856404;
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .legal-text {
+            color: #856404;
+            line-height: 1.6;
+        }
+
+        /* Hide WordPress page title */
+        .entry-title, .page-title, h1.entry-title, .post-title, h1 { 
+            display: none !important; 
+        }
+
+        @media (max-width: 768px) {
+            .glass-container {
+                margin: 10px;
+                border-radius: 20px;
+            }
+            
+            .hero-section {
+                padding: 40px 20px;
+            }
+            
+            .content-section {
+                padding: 30px 20px;
+            }
+            
+            .logo {
+                font-size: 2.8em;
+            }
+            
+            .upload-card {
+                padding: 30px 20px;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .description-card {
+                padding: 30px 20px;
+            }
+            
+            .legal-content {
+                margin-left: 0;
+                margin-top: 30px;
+            }
+        }
+
+        .file-name {
+            display: block;
+            margin-top: 10px;
+            color: var(--success);
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+        
+        /* Unified Intelligent System Styles (EXACTLY like health.html) */
+        .test-type-selector {
+            margin: 25px 0;
+            padding: 20px;
+            background: rgba(248, 249, 250, 0.7);
+            border-radius: 15px;
+            border: 1px solid rgba(81, 116, 139, 0.1);
+        }
+        
+        .test-type-label {
+            display: block;
+            margin-bottom: 12px;
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 1.1em;
+        }
+        
+        .test-type-options {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .test-type-option {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 12px 20px;
+            background: white;
+            border-radius: 12px;
+            border: 2px solid #51748B;
+            transition: all 0.3s ease;
+            min-width: 220px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        
+        .test-type-option:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(81, 116, 139, 0.15);
+        }
+        
+        .test-type-option.post-type {
+            border-color: #F48120;
+        }
+        
+        .test-type-radio {
+            margin-right: 12px;
+            transform: scale(1.2);
+        }
+        
+        .test-type-content {
+            flex: 1;
+        }
+        
+        .test-type-title {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 1em;
+        }
+        
+        .test-type-description {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+        
+        .test-type-hint {
+            margin-top: 12px;
+            padding: 12px;
+            background: #e8f4fc;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+            font-size: 0.95em;
+            line-height: 1.5;
+        }
+        
+        .test-type-hint.post-hint {
+            background: #fef7e8;
+            border-left-color: #F48120;
+        }
+    </style>
+</head>
+<body>
+    <div class="glass-container">
+        <div class="hero-section">
+            <div class="logo">
+                <i class="fas fa-balance-scale" style="color: #F48120;"></i> FDK™ Justice
+            </div>
+            <div class="domain-title">Justice Domain Fairness Audit</div>
+            <div class="tagline">Upload Justice Dataset (CSV) for Legal Equity Analysis</div>
+            <div class="metrics-badge">
+                <i class="fas fa-chart-line"></i> 36 Justice Fairness Metrics
+            </div>
+        </div>
+
+        <div class="content-section">
+            <div class="description-card">
+                <div class="description-title">
+                    <i class="fas fa-gavel" style="color: #F48120;"></i> Legal Decisions • Defendant Groups • Sentencing Predictions • Judicial Equity
+                </div>
+                <div class="description-text">
+                    Upload your justice dataset to analyze fairness across defendant demographics, detect algorithmic bias in legal predictions, 
+                    and ensure equitable judicial outcomes. Our comprehensive audit identifies disparities in sentencing, bail decisions, and legal resource allocation.
+                </div>
+            </div>
+
+            <div class="upload-section">
+                <form action="/justice/justice-audit" method="post" enctype="multipart/form-data">
+                    <div class="upload-card">
+                        <div class="upload-icon">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                        </div>
+                        <div class="upload-title">Upload Justice Dataset</div>
+                        <div class="upload-subtitle">Select a CSV file containing justice data for comprehensive equity analysis</div>
+                        
+                        <!-- UNIFIED INTELLIGENT TEST TYPE SELECTOR (EXACTLY like health.html) -->
+                        <div class="test-type-selector">
+                            <div class="test-type-label">
+                                <i class="fas fa-vial"></i> Fairness Test Type
+                            </div>
+                            
+                            <div class="test-type-options">
+                                <label class="test-type-option">
+                                    <input type="radio" name="test_type" value="pre_implementation" 
+                                           class="test-type-radio" checked>
+                                    <div class="test-type-content">
+                                        <div class="test-type-title">Pre-Implementation Test</div>
+                                        <div class="test-type-description">
+                                            Baseline fairness of original legal algorithm
+                                        </div>
+                                    </div>
+                                </label>
+                                
+                                <label class="test-type-option post-type">
+                                    <input type="radio" name="test_type" value="post_implementation" 
+                                           class="test-type-radio">
+                                    <div class="test-type-content">
+                                        <div class="test-type-title">Post-Implementation Test</div>
+                                        <div class="test-type-description">
+                                            Fairness after bias correction for legal AI
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                            
+                            <div id="testTypeHint" class="test-type-hint">
+                                <i class="fas fa-info-circle" style="color: #3498db; margin-right: 8px;"></i>
+                                <span id="hintText">
+                                    <strong>Pre-Implementation:</strong> Test original legal algorithm fairness. 
+                                    <strong>Post-Implementation:</strong> Test bias-corrected legal algorithm fairness.
+                                </span>
+                            </div>
+                            
+                            <!-- HIDDEN TARGET COLUMN FIELD (auto-filled by intelligent system) -->
+                            <input type="hidden" name="target_column" id="autoTargetColumn" value="">
+                        </div>
+                        <!-- END UNIFIED SELECTOR -->
+                        
+                        <div class="file-input-wrapper">
+                            <input type="file" name="file" accept=".csv" required class="file-input" id="justiceFile">
+                            <label for="justiceFile" class="file-input-label">
+                                <i class="fas fa-file-csv"></i> Choose CSV File
+                            </label>
+                            <span class="file-name" id="fileName"></span>
+                        </div>
+                        
+                        <button type="submit" class="submit-btn">
+                            <i class="fas fa-play-circle"></i> Run Justice Equity Audit
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="features-section">
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-search-plus"></i>
+                        </div>
+                        <div class="feature-title">Legal Bias Detection</div>
+                        <div class="feature-description">
+                            Advanced algorithms identify disparities in sentencing, bail decisions, and legal outcomes across demographic groups.
+                        </div>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-scale-balanced"></i>
+                        </div>
+                        <div class="feature-title">Judicial Compliance</div>
+                        <div class="feature-description">
+                            36 specialized fairness metrics aligned with legal standards, civil rights, and equal protection under the law.
+                        </div>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-chart-pie"></i>
+                        </div>
+                        <div class="feature-title">Justice Equity Analytics</div>
+                        <div class="feature-description">
+                            Comprehensive assessment with visual analytics, disparity reports, and recommendations for equitable legal systems.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="legal-section">
+                <div class="legal-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="legal-content">
+                    <div class="legal-title">Legal Disclaimer</div>
+                    <div class="legal-text">
+                        This tool provides fairness assessment and analytical insights for justice data analysis and research purposes only. 
+                        It supports judicial equity efforts but does not replace professional legal consultation or constitute legal advice.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const fileInput = document.getElementById('justiceFile');
+        const fileName = document.getElementById('fileName');
+        const autoTargetColumn = document.getElementById('autoTargetColumn');
+        const testTypeHint = document.getElementById('testTypeHint');
+        const hintText = document.getElementById('hintText');
+        
+        const testTypeRadios = document.querySelectorAll('input[name="test_type"]');
+        
+        // Test type radio button handlers
+        testTypeRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                updateTestTypeHint(this.value);
+            });
+        });
+        
+        function updateTestTypeHint(testType) {
+            const hints = {
+                'pre_implementation': 
+                    '<strong>Pre-Implementation Test:</strong> Assessing baseline fairness of your original legal algorithm. ' +
+                    'FDK will intelligently select the appropriate target column for baseline judicial assessment.',
+                'post_implementation': 
+                    '<strong>Post-Implementation Test:</strong> Evaluating fairness after bias mitigation techniques in legal AI. ' +
+                    'FDK will intelligently select the corrected target column for judicial comparison.'
+            };
+            
+            hintText.innerHTML = hints[testType] || hints['pre_implementation'];
+            
+            // Update hint box styling based on test type
+            if (testType === 'post_implementation') {
+                testTypeHint.classList.add('post-hint');
+                testTypeHint.style.background = '#fef7e8';
+                testTypeHint.style.borderLeftColor = '#F48120';
+            } else {
+                testTypeHint.classList.remove('post-hint');
+                testTypeHint.style.background = '#e8f4fc';
+                testTypeHint.style.borderLeftColor = '#3498db';
+            }
+        }
+        
+        // File input handler with intelligent target detection (EXACTLY like health.html)
+        fileInput.addEventListener('change', async function (e) {
+            if (e.target.files.length === 0) {
+                fileName.textContent = '';
+                return;
+            }
+
+            const file = e.target.files[0];
+            fileName.textContent = 'Selected: ' + file.name;
+            fileName.style.color = '#27ae60';
+            
+            // Get selected test type
+            const selectedTestType = document.querySelector('input[name="test_type"]:checked').value;
+            
+            // Show loading state
+            hintText.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing justice dataset structure...';
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('test_type', selectedTestType);
+                
+                // Call enhanced API with test type for intelligent selection
+                const res = await fetch('/api/detect-columns', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await res.json();
+                
+                if (!res.ok) {
+                    throw new Error(data.error || 'Could not analyze justice dataset');
+                }
+                
+                // Auto-fill the hidden target column field with intelligent suggestion
+                autoTargetColumn.value = data.suggested_target || '';
+                
+                // Show success message with selected column
+                if (data.suggested_target) {
+                    hintText.innerHTML = 
+                        `✅ Intelligent selection complete! ` +
+                        `Legal target column: <strong>${data.suggested_target}</strong><br>` +
+                        `<small>Based on ${selectedTestType.replace('_', ' ')} test type` +
+                        (data.intelligent_selection ? ' (intelligent selection)' : '') + '</small>';
+                } else {
+                    hintText.innerHTML = 
+                        `⚠️ Could not auto-select legal target. ` +
+                        `The system will use default column detection.`;
+                }
+                
+            } catch (err) {
+                hintText.innerHTML = 
+                    `⚠️ Could not auto-select target: ${err.message}. ` +
+                    `The system will use default column detection.`;
+                autoTargetColumn.value = '';
+            }
+        });
+        
+        // Initialize hint
+        updateTestTypeHint('pre_implementation');
+    });
+    </script>
+
+</body>
+</html>
