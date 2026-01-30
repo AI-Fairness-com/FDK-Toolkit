@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FDK Finance Fairness Audit</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #002D62; /* American Express Blue */
+            --secondary: #CC0000; /* Visa Red */
+            --accent: #3498db;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --gray: #7f8c8d;
+            --gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--gradient);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .glass-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 25px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, var(--primary), #00214e);
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--secondary), var(--accent), #0047ab);
+        }
+
+        .hero-section::after {
+            content: '';
+            position: absolute;
+            bottom: -50px;
+            right: -50px;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(204, 0, 0, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .logo {
+            font-size: 3.5em;
+            font-weight: 800;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #fff, #ecf0f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .domain-title {
+            font-size: 2.2em;
+            font-weight: 600;
+            margin-bottom: 20px;
+            opacity: 0.95;
+        }
+
+        .tagline {
+            font-size: 1.3em;
+            opacity: 0.9;
+            margin-bottom: 25px;
+            font-weight: 300;
+        }
+
+        .metrics-badge {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 30px;
+            font-size: 1.1em;
+            font-weight: 600;
+            display: inline-block;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .content-section {
+            padding: 50px 40px;
+        }
+
+        .description-card {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            padding: 40px;
+            border-radius: 20px;
+            margin-bottom: 50px;
+            border-left: 6px solid var(--secondary);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        }
+
+        .description-title {
+            color: var(--dark);
+            font-size: 1.6em;
+            margin-bottom: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .description-title i {
+            color: var(--secondary);
+            font-size: 1.2em;
+        }
+
+        .description-text {
+            color: var(--gray);
+            font-size: 1.1em;
+            line-height: 1.7;
+        }
+
+        .upload-section {
+            margin-bottom: 50px;
+        }
+
+        .upload-card {
+            background: white;
+            border-radius: 20px;
+            padding: 50px;
+            text-align: center;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+            border: 2px dashed var(--primary);
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 45, 98, 0.05), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .upload-card:hover::before {
+            left: 100%;
+        }
+
+        .upload-card:hover {
+            transform: translateY(-8px);
+            border-color: var(--secondary);
+            box-shadow: 0 25px 50px rgba(0, 45, 98, 0.2);
+        }
+
+        .upload-icon {
+            font-size: 5em;
+            color: var(--primary);
+            margin-bottom: 25px;
+            display: block;
+            transition: all 0.3s ease;
+        }
+
+        .upload-card:hover .upload-icon {
+            color: var(--secondary);
+            transform: scale(1.1);
+        }
+
+        .upload-title {
+            color: var(--dark);
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .upload-subtitle {
+            color: var(--gray);
+            font-size: 1.1em;
+            margin-bottom: 30px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            margin: 25px 0;
+        }
+
+        .file-input-label {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary), #00214e);
+            color: white;
+            padding: 18px 35px;
+            border-radius: 15px;
+            font-size: 1.2em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid var(--primary);
+            box-shadow: 0 5px 20px rgba(0, 45, 98, 0.3);
+        }
+
+        .file-input-label:hover {
+            background: linear-gradient(135deg, var(--secondary), #b30000);
+            border-color: var(--secondary);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(204, 0, 0, 0.4);
+        }
+
+        .file-input {
+            position: absolute;
+            opacity: 0;
+            width: 0.1px;
+            height: 0.1px;
+        }
+
+        .file-name {
+            display: block;
+            margin-top: 15px;
+            font-size: 1.1em;
+            color: var(--dark);
+            font-weight: 500;
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, var(--secondary), #b30000);
+            color: white;
+            border: none;
+            padding: 20px 60px;
+            font-size: 1.3em;
+            font-weight: 600;
+            border-radius: 35px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(204, 0, 0, 0.4);
+            letter-spacing: 0.5px;
+            margin-top: 20px;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 15px 35px rgba(204, 0, 0, 0.6);
+            background: linear-gradient(135deg, #b30000, var(--secondary));
+        }
+
+        .features-section {
+            margin: 60px 0;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 30px;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 40px 30px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            border-top: 5px solid var(--primary);
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+
+        .feature-icon {
+            font-size: 3em;
+            margin-bottom: 25px;
+            color: var(--primary);
+            display: block;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover .feature-icon {
+            color: var(--secondary);
+            transform: scale(1.1);
+        }
+
+        .feature-title {
+            color: var(--dark);
+            font-size: 1.4em;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .feature-description {
+            color: var(--gray);
+            line-height: 1.6;
+        }
+
+        .legal-section {
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+            border: 1px solid var(--warning);
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 50px;
+            position: relative;
+            border-left: 6px solid var(--warning);
+        }
+
+        .legal-icon {
+            position: absolute;
+            top: -15px;
+            left: 30px;
+            background: white;
+            padding: 10px;
+            border-radius: 50%;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            color: var(--warning);
+        }
+
+        .legal-content {
+            margin-left: 50px;
+        }
+
+        .legal-title {
+            color: #856404;
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .legal-text {
+            color: #856404;
+            line-height: 1.6;
+        }
+
+        /* Hide WordPress page title */
+        .entry-title, .page-title, h1.entry-title, .post-title, h1 { 
+            display: none !important; 
+        }
+
+        /* NEW STYLES FOR INTELLIGENT SELECTION SYSTEM */
+        .test-type-selector {
+            margin: 25px 0;
+        }
+
+        .test-type-label {
+            margin-bottom: 12px;
+            font-weight: 600;
+            color: var(--dark);
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .test-type-options {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .test-type-option {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 12px 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border: 2px solid var(--primary);
+            transition: all 0.3s ease;
+            min-width: 220px;
+        }
+
+        .test-type-option:hover {
+            background: #e8f4fc;
+            transform: translateY(-2px);
+        }
+
+        .test-type-option.post-option {
+            border-color: var(--secondary);
+        }
+
+        .test-type-option.post-option:hover {
+            background: #fef7e8;
+        }
+
+        .test-type-option input {
+            margin-right: 12px;
+            transform: scale(1.2);
+        }
+
+        .test-type-details {
+            flex: 1;
+        }
+
+        .test-type-title {
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .test-type-description {
+            font-size: 0.9em;
+            color: var(--gray);
+            margin-top: 4px;
+        }
+
+        .intelligent-hint {
+            margin-top: 12px;
+            padding: 12px;
+            background: #e8f4fc;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent);
+            transition: all 0.3s ease;
+        }
+
+        .intelligent-hint.post-hint {
+            background: #fef7e8;
+            border-left-color: var(--secondary);
+        }
+
+        .hint-icon {
+            color: var(--accent);
+            margin-right: 8px;
+        }
+
+        .post-hint .hint-icon {
+            color: var(--secondary);
+        }
+
+        /* Target column wrapper */
+        #targetWrap {
+            margin-top: 18px;
+        }
+
+        #targetColumn {
+            width: min(520px, 90%);
+            padding: 14px 16px;
+            border-radius: 14px;
+            border: 1px solid rgba(44,62,80,0.25);
+            font-size: 1.05em;
+            background: white;
+            margin-top: 8px;
+        }
+
+        #targetHint {
+            margin-top: 8px;
+            color: var(--gray);
+            font-size: 0.95em;
+        }
+
+        /* Intelligent Selection Status */
+        #intelligentStatus {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 8px;
+            display: none;
+            background: #e8f4fc;
+            border-left: 4px solid var(--accent);
+        }
+
+        #intelligentStatus.post-status {
+            background: #fef7e8;
+            border-left-color: var(--secondary);
+        }
+
+        @media (max-width: 768px) {
+            .glass-container {
+                margin: 10px;
+                border-radius: 20px;
+            }
+            
+            .hero-section {
+                padding: 40px 20px;
+            }
+            
+            .content-section {
+                padding: 30px 20px;
+            }
+            
+            .logo {
+                font-size: 2.8em;
+            }
+            
+            .upload-card {
+                padding: 30px 20px;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .description-card {
+                padding: 30px 20px;
+            }
+            
+            .legal-content {
+                margin-left: 0;
+                margin-top: 30px;
+            }
+            
+            .test-type-options {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .test-type-option {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="glass-container">
+        <div class="hero-section">
+            <div class="logo">
+                <i class="fas fa-chart-line" style="color: #CC0000;"></i> FDK™ Finance
+            </div>
+            <div class="domain-title">Finance Domain Fairness Audit</div>
+            <div class="tagline">Upload Finance Dataset (CSV) for Financial Equity Analysis</div>
+            <div class="metrics-badge">
+                <i class="fas fa-chart-line"></i> 30 Financial Fairness Metrics
+            </div>
+        </div>
+
+        <div class="content-section">
+            <div class="description-card">
+                <div class="description-title">
+                    <i class="fas fa-coins" style="color: #CC0000;"></i> Credit Decisions • Customer Groups • Risk Predictions • Financial Equity
+                </div>
+                <div class="description-text">
+                    Upload your finance dataset to analyze fairness across customer demographics, detect algorithmic bias in credit decisions, 
+                    and ensure equitable financial outcomes. Our comprehensive audit identifies disparities in lending, risk assessment, and financial service allocation.
+                </div>
+            </div>
+
+            <div class="upload-section">
+                <form action="/finance/finance-audit" method="post" enctype="multipart/form-data">
+                    <div class="upload-card">
+                        <div class="upload-icon">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                        </div>
+                        <div class="upload-title">Upload Finance Dataset</div>
+                        <div class="upload-subtitle">Select a CSV file containing financial data for comprehensive equity analysis</div>
+                        
+                        <!-- TEST TYPE SELECTOR (ADDED FOR UNIFIED INTELLIGENT SYSTEM) -->
+                        <div class="test-type-selector">
+                            <div class="test-type-label">
+                                <i class="fas fa-vial"></i> Fairness Test Type
+                            </div>
+                            
+                            <div class="test-type-options">
+                                <label class="test-type-option">
+                                    <input type="radio" name="test_type" value="pre_implementation" checked>
+                                    <div class="test-type-details">
+                                        <div class="test-type-title">Pre-Implementation Test</div>
+                                        <div class="test-type-description">Baseline fairness of original algorithm</div>
+                                    </div>
+                                </label>
+                                
+                                <label class="test-type-option post-option">
+                                    <input type="radio" name="test_type" value="post_implementation">
+                                    <div class="test-type-details">
+                                        <div class="test-type-title">Post-Implementation Test</div>
+                                        <div class="test-type-description">Fairness after bias correction</div>
+                                    </div>
+                                </label>
+                            </div>
+                            
+                            <div id="testTypeHint" class="intelligent-hint">
+                                <i class="fas fa-info-circle hint-icon"></i>
+                                <span id="hintText">
+                                    <strong>Pre-Implementation:</strong> Test original algorithm fairness. 
+                                    <strong>Post-Implementation:</strong> Test bias-corrected algorithm fairness.
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- FILE INPUT SECTION -->
+                        <div class="file-input-wrapper">
+                            <input type="file" name="file" accept=".csv" required class="file-input" id="financeFile">
+                            <label for="financeFile" class="file-input-label">
+                                <i class="fas fa-file-csv"></i> Choose CSV File
+                            </label>
+                            <span class="file-name" id="fileName"></span>
+                        </div>
+                        
+                        <!-- INTELLIGENT SELECTION STATUS -->
+                        <div id="intelligentStatus">
+                            <i class="fas fa-robot"></i> 
+                            <span id="statusText">Intelligent system ready</span>
+                        </div>
+                        
+                        <!-- HIDDEN TARGET COLUMN FIELDS (for unified system) -->
+                        <input type="hidden" name="target_column" id="targetColumnHidden" value="">
+                        <input type="hidden" name="target_column_fallback" id="autoTargetColumn" value="">
+                        
+                        <!-- TARGET COLUMN SELECTOR (for backward compatibility and manual override) -->
+                        <div id="targetWrap" style="display: none;">
+                            <div style="margin-bottom: 8px; font-weight: 600; color: #2c3e50;">
+                                Target column (intelligent suggestion selected)
+                            </div>
+                            <select name="target_column_fallback" id="targetColumn"></select>
+                            <div id="targetHint" style="margin-top: 8px; color: #7f8c8d; font-size: 0.95em;">
+                                You can override the intelligent suggestion if needed
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="submit-btn">
+                            <i class="fas fa-play-circle"></i> Run Finance Equity Audit
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="features-section">
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-search-plus"></i>
+                        </div>
+                        <div class="feature-title">Financial Bias Detection</div>
+                        <div class="feature-description">
+                            Advanced algorithms identify disparities in credit scoring, loan approvals, and financial service access across demographic groups.
+                        </div>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <div class="feature-title">Regulatory Compliance</div>
+                        <div class="feature-description">
+                            30 specialized fairness metrics aligned with financial regulations, fair lending laws, and consumer protection standards.
+                        </div>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-chart-pie"></i>
+                        </div>
+                        <div class="feature-title">Financial Equity Analytics</div>
+                        <div class="feature-description">
+                            Comprehensive assessment with visual analytics, disparity reports, and actionable recommendations for equitable financial services.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="legal-section">
+                <div class="legal-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="legal-content">
+                    <div class="legal-title">Financial Disclaimer</div>
+                    <div class="legal-text">
+                        This tool provides fairness assessment and analytical insights for financial data analysis and research purposes only. 
+                        It supports financial equity efforts but does not replace professional financial consultation or regulatory compliance review.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const fileInput = document.getElementById('financeFile');
+        const fileName = document.getElementById('fileName');
+        const targetColumnHidden = document.getElementById('targetColumnHidden');
+        const autoTargetColumn = document.getElementById('autoTargetColumn');
+        const testTypeHint = document.getElementById('testTypeHint');
+        const hintText = document.getElementById('hintText');
+        const intelligentStatus = document.getElementById('intelligentStatus');
+        const statusText = document.getElementById('statusText');
+        
+        const testTypeRadios = document.querySelectorAll('input[name="test_type"]');
+        const targetWrap = document.getElementById('targetWrap');
+        const targetSelect = document.getElementById('targetColumn');
+        const targetHint = document.getElementById('targetHint');
+        
+        // Initialize
+        function resetTargetUI() {
+            targetSelect.innerHTML = '';
+            targetHint.textContent = 'You can override the intelligent suggestion if needed';
+            targetWrap.style.display = 'none';
+            intelligentStatus.style.display = 'none';
+        }
+        
+        // Test type radio button handlers
+        testTypeRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                updateTestTypeHint(this.value);
+                // Clear any previous selection when test type changes
+                resetTargetUI();
+                if (fileInput.files.length > 0) {
+                    // Re-analyze if file already selected
+                    fileInput.dispatchEvent(new Event('change'));
+                }
+            });
+        });
+        
+        function updateTestTypeHint(testType) {
+            const hints = {
+                'pre_implementation': 
+                    '<strong>Pre-Implementation Test:</strong> Assessing baseline fairness of your original algorithm. ' +
+                    'FDK will intelligently select the appropriate target column for baseline assessment.',
+                'post_implementation': 
+                    '<strong>Post-Implementation Test:</strong> Evaluating fairness after bias mitigation techniques. ' +
+                    'FDK will intelligently select the corrected target column for comparison.'
+            };
+            
+            hintText.innerHTML = hints[testType] || hints['pre_implementation'];
+            
+            // Update hint box color based on test type
+            if (testType === 'post_implementation') {
+                testTypeHint.classList.add('post-hint');
+                testTypeHint.classList.remove('intelligent-hint');
+                testTypeHint.style.background = '#fef7e8';
+                testTypeHint.style.borderLeftColor = '#CC0000';
+            } else {
+                testTypeHint.classList.remove('post-hint');
+                testTypeHint.classList.add('intelligent-hint');
+                testTypeHint.style.background = '#e8f4fc';
+                testTypeHint.style.borderLeftColor = '#3498db';
+            }
+        }
+        
+        // File input handler with intelligent target detection
+        fileInput.addEventListener('change', async function (e) {
+            resetTargetUI();
+            
+            if (e.target.files.length === 0) {
+                fileName.textContent = '';
+                return;
+            }
+
+            const file = e.target.files[0];
+            fileName.textContent = 'Selected: ' + file.name;
+            fileName.style.color = '#27ae60';
+            
+            // Get selected test type
+            const selectedTestType = document.querySelector('input[name="test_type"]:checked').value;
+            
+            // Show loading state
+            hintText.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing dataset structure...';
+            statusText.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Intelligent system analyzing...';
+            intelligentStatus.style.display = 'block';
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('domain', 'finance');
+                formData.append('test_type', selectedTestType);
+                
+                // Call enhanced API with test type and domain hint
+                const res = await fetch('/api/detect-columns', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await res.json();
+                
+                if (!res.ok) {
+                    throw new Error(data.error || 'Could not analyze dataset');
+                }
+                
+                // ✅ CRITICAL FIX: Set BOTH hidden fields for unified system
+                if (data.suggested_target) {
+                    // Set target_column (for fdk_finance.py unified system)
+                    targetColumnHidden.value = data.suggested_target;
+                    
+                    // Also set target_column_fallback (for backward compatibility)
+                    autoTargetColumn.value = data.suggested_target;
+                    
+                    // Update intelligent status display
+                    statusText.innerHTML = `✅ Intelligent selection: <strong>${data.suggested_target}</strong> ` +
+                                         `(based on ${selectedTestType.replace('_', ' ')} test)`;
+                    
+                    // Update status box styling based on test type
+                    if (selectedTestType === 'post_implementation') {
+                        intelligentStatus.classList.add('post-status');
+                        intelligentStatus.classList.remove('intelligent-hint');
+                        intelligentStatus.style.background = '#fef7e8';
+                        intelligentStatus.style.borderLeftColor = '#CC0000';
+                    } else {
+                        intelligentStatus.classList.remove('post-status');
+                        intelligentStatus.classList.add('intelligent-hint');
+                        intelligentStatus.style.background = '#e8f4fc';
+                        intelligentStatus.style.borderLeftColor = '#3498db';
+                    }
+                }
+                
+                // Also populate the dropdown for manual override option
+                if (data.columns && Array.isArray(data.columns)) {
+                    targetSelect.innerHTML = '';
+                    data.columns.forEach(col => {
+                        const opt = document.createElement('option');
+                        opt.value = col;
+                        opt.textContent = col;
+                        if (col === data.suggested_target) opt.selected = true;
+                        targetSelect.appendChild(opt);
+                    });
+                    targetWrap.style.display = 'block';
+                }
+                
+                // Show success message
+                hintText.innerHTML = 
+                    `✅ Intelligent analysis complete! ` +
+                    `The system will use: <strong>${data.suggested_target}</strong> as target column.` +
+                    `<br><small>Test type: ${selectedTestType.replace('_', ' ')} • ` +
+                    `Selection source: ${data.selection_source || 'intelligent system'}</small>`;
+                
+            } catch (err) {
+                hintText.innerHTML = 
+                    `⚠️ Could not auto-select target: ${err.message}. ` +
+                    `You may need to manually specify columns.`;
+                statusText.innerHTML = `❌ Intelligent selection failed: ${err.message}`;
+                
+                // Clear hidden fields on error
+                targetColumnHidden.value = '';
+                autoTargetColumn.value = '';
+                
+                // Show error in target hint
+                targetHint.textContent = 'Error: ' + err.message + ' - Please manually select target column';
+                targetWrap.style.display = 'block';
+                
+                // Show error styling
+                intelligentStatus.style.background = '#fde8e8';
+                intelligentStatus.style.borderLeftColor = '#e74c3c';
+            }
+        });
+        
+        // Initialize hint
+        updateTestTypeHint('pre_implementation');
+        resetTargetUI();
+        
+        // Add event listener for manual dropdown changes
+        targetSelect.addEventListener('change', function() {
+            // When user manually changes dropdown, update BOTH hidden fields
+            const manualSelection = this.value;
+            targetColumnHidden.value = manualSelection;
+            autoTargetColumn.value = manualSelection;
+            
+            // Update status to show manual override
+            statusText.innerHTML = `⚠️ Manual override: <strong>${manualSelection}</strong> ` +
+                                 `(overrides intelligent suggestion)`;
+            intelligentStatus.style.background = '#fff3cd';
+            intelligentStatus.style.borderLeftColor = '#f39c12';
+        });
+    });
+    </script>
+</body>
+</html>
