@@ -1,151 +1,125 @@
-# 🧭 FDK™ Development Roadmap
+# ERG Analysis API
 
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-green.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
-This roadmap outlines planned milestones for the **Fairness Diagnostic Kit (FDK™)**.  
-It supports academic transparency, version planning, and future reproducibility across all seven domains.
+**Full-field ERG signal processing, machine learning classification, and clinical decision support API.**
 
-The timeline follows semantic versioning (v1.x, v2.x) and is aligned with reviewer recommendations and the FDK™ book (Tavakoli, 2025).
+This repository accompanies the textbook "**Hands-On Electroretinography in the Age of AI**
+_*A Practical Guide from Clinical Fundamentals to Intelligent Decision Support*" (Apress/Springer-Nature, forthcoming (Tavakoli 2027)).
 
----
+## Version Information
 
-# 🚀 Version Milestones
+**Current Version: 2.3.2** | Release Date: 18 May 2026
 
-## ✅ v1.0.0 — Initial Public Release  
-**Status:** *Planned for immediate release*  
-This version includes:
+- **V2.3.2**: Age-stratified reference ranges (Baker et al. 2025) integrated; 15 parameter corrections; 94.5% specificity validated on 407 healthy subjects.
+- **V2.3.1**: Initial ISCEV 2022 compliant release; OculusGraphy 2020 technical validation (149 files; 100% success).
 
-- Fully functional seven-domain fairness pipeline  
-- Flask-based web interface  
-- Synthetic datasets and narrative summaries  
-- JSON audit reporting engine  
-- Documentation bundle:
-  - installation.md  
-  - architecture.md  
-  - domains.md  
-  - example_usage.md  
-  - disclaimer.md  
-- Apache 2.0 licensing  
-- Repository restructuring for clarity  
+See `docs/CHANGELOG.md` for complete version history.
 
-Deliverable: Initial GitHub Release + changelog.
+## Overview
 
----
+This project provides a complete, reproducible pipeline for:
+- **ISCEV-compliant ERG filtering** (Butterworth bandpass, notch, median)
+- **Time-frequency analysis** (STFT spectrograms, wavelet transforms)
+- **Feature extraction** (time-domain, frequency-domain, STFT statistics)
+- **Machine learning classification** (Random Forest baseline + Vision Transformer)
+- **SHAP explainability** (feature-level, spectrogram-level, plain-language)
+- **No-code clinical API** (four-layer report: Traffic Light + Clinical Summary + Specialist + Audit)
 
-# 📘 v1.1.0 — Unit Testing & Benchmark Validation  
-**Goals:**
+## Repository Structure
 
-- Add comprehensive test suite:
-  - Column detection tests  
-  - Metric verification tests  
-  - Pipeline consistency tests  
-  - JSON schema validation  
-- Validate pipelines against known benchmarks:
-  - COMPAS (justice domain)  
-  - UCI Adult (hiring/finance domain)  
-- Introduce automated CI checks (optional)
+| Directory | Contents |
+|:---|:---|
+| `/chapter_scripts` | Complete Python code for all 19 textbook chapters |
+| `/api` | Flask/FastAPI application for no-code clinical decision support |
+| `/data` | De-identified sample ERG recordings + normative reference data |
+| `/notebooks` | Interactive Jupyter notebooks (one per chapter) |
+| `/tests` | Unit tests for filters, features, and API endpoints |
+| `/docs` | Documentation including CHANGELOG.md and validation reports |
 
-**Outcome:** Scientific reproducibility and baseline fairness validity.
+## Quick Start
 
----
+### Local Installation (Conda)
 
-# 📊 v1.2.0 — Jupyter Notebook Demos  
-**Goals:**
+    git clone https://github.com/AI-Fairness-com/erg-analysis-api.git
+    cd erg-analysis-api
+    conda env create -f environment.yml
+    conda activate erg-analysis
+    python api/app.py
 
-Create demonstration notebooks for all seven domains:
+### Docker Deployment
 
-- Business  
-- Education  
-- Finance  
-- Health  
-- Hiring  
-- Justice  
-- Governance  
+    docker build -t erg-api .
+    docker run -p 8080:8080 erg-api
 
-Each will show:
+## Validation Status
 
-- Dataset loading  
-- Pipeline execution  
-- Key fairness metrics  
-- Explanation of outputs  
-- Simple visualisations  
+| Validation Type | Dataset | Result | Status |
+|:---|:---|:---|:---|
+| **Synthetic (Internal)** | 7 disease classes | 100% correct classification | ✅ PASS |
+| **Technical (External)** | OculusGraphy 2020 (n=149) | 100% processing success | ✅ PASS |
+| **Specificity (External)** | Baker et al. 2025 (n=407) | 94.5% GREEN rate | ✅ PASS |
+| **Sensitivity (External)** | Real pathology recordings | Planned for V3.0 | ⏳ PENDING |
 
-**Outcome:** Educational materials for teaching, workshops, and academic demonstrations.
+## Reference Ranges
 
----
+Pipeline V2.3.2 uses **age-stratified reference ranges** from:
 
-# 📁 v1.3.0 — Dataset Expansion (Real + Synthetic)  
-**Goals:**
+> Baker RA, Leo SM, Clowes WIN, et al. ISCEV standard full-field ERG reference limits from 407 healthy subjects, derived from transference and validation of reference data between electrode types and centres. *Documenta Ophthalmologica.* 2025;150:47–64. doi:10.1007/s10633-025-10009-2
 
-- Add curated open datasets:
-  - UCI Adult  
-  - COMPAS  
-  - OpenML Finance datasets  
-  - Public health outcome datasets (anonymised)  
-- Strengthen synthetic datasets using domain-accurate distributions:
-  - Region × Age × Ethnicity × Outcome  
-  - Sector-specific behaviour modelling
+- **Age groups:** ≤35, 36-59, ≥60 years
+- **Electrodes:** Silver thread (fornix) + Gold foil (transformed)
+- **Protocols:** All five ISCEV standard protocols (DA 0.01, DA 3, DA 10, LA 3, LA 30 Hz)
 
-**Outcome:** Richer, domain-faithful datasets that reflect real bias structures.
+**Note:** b/a ratio and PhNR reference ranges are retained estimates (not in Baker 2025).
 
----
+## Traffic Light Interpretation
 
-# 📈 v1.4.0 — Metric Visualisation Layer  
-**Goals:**
+| Signal | Z-Score Range | Clinical Action |
+|:---|:---|:---|
+| 🟢 **GREEN** | \|Z\| ≤ 2.0 | Within normal limits. No immediate action required. |
+| 🟡 **AMBER** | 2.0 < \|Z\| ≤ 3.0 | Borderline abnormality. Specialist review recommended. |
+| 🔴 **RED** | \|Z\| > 3.0 | Significant abnormality. Urgent review required. |
 
-- Introduce Python-based fairness visualisations (matplotlib only):
-  - Group-wise distributions  
-  - Error rate gaps  
-  - Calibration curves  
-  - Disparate impact plots  
-- Optional: Visualisation tab in HTML interface (static images)
+## Citation
 
-**Outcome:** Improved interpretability for non-technical stakeholders.
+If you use this pipeline in your research, please cite:
 
----
+    @misc{tavakoli2026erg,
+      author = {Tavakoli, Hamid},
+      title = {ERG Analysis API: ISCEV 2022-Compliant Full-Field ERG Processing Pipeline},
+      year = {2026},
+      publisher = {GitHub},
+      version = {2.3.2},
+      url = {https://github.com/AI-Fairness-com/erg-analysis-api}
+    }
 
-# 🧩 v1.5.0 — Metric Taxonomy Reference  
-**Goals:**
+For the reference ranges, cite:
 
-- Add comprehensive metric documentation (formulas + narrative)  
-- Provide cross-domain mapping of metrics  
-- Include a downloadable PDF reference for teaching  
+    @article{baker2025iscev,
+      author = {Baker, R.A. and Leo, S.M. and Clowes, W.I.N. et al.},
+      title = {ISCEV standard full-field ERG reference limits from 407 healthy subjects},
+      journal = {Documenta Ophthalmologica},
+      volume = {150},
+      pages = {47--64},
+      year = {2025},
+      doi = {10.1007/s10633-025-10009-2}
+    }
 
-**Outcome:** Academic-grade metric glossary aligned with the FDK™ book.
+## License
 
----
+MIT License — see [LICENSE](LICENSE) file for details.
 
-# 🕊️ v2.0.0 — Governance & Educational Edition  
-**Goals:**
+## Contact
 
-- Fully integrated teaching mode:  
-  - Simplified explanations  
-  - Interactive fairness examples  
-  - Domain comparison framework  
-- Optional “Governance Pack”:
-  - Policy templates  
-  - Fairness reporting examples  
-  - Sector-specific ethics notes  
-- Optional REST API extension
+For questions, issues, or collaboration inquiries:
 
-**Outcome:** A stable, education- and governance-ready fairness suite.
+- **Email:** info@ai-fairness.com
+- **GitHub Issues:** [Open an issue](https://github.com/AI-Fairness-com/erg-analysis-api/issues)
+
+For clinical validation partnerships or dataset access inquiries, please email directly.
 
 ---
 
-# 🔍 Long-Term Vision (v3.x and Beyond)
-
-- Multi-metric optimisation suggestions  
-- Bias mitigation modules (pre-processing & post-processing)  
-- Cross-domain fairness parity explorer  
-- Internationalisation (reduce English-only limitations)  
-- Comprehensive fairness benchmark suite  
-- Integration with wider fairness toolkits (AIF360, Fairlearn, OpenML)
-
----
-
-# 📬 Contact
-
-For collaboration, ideas, or feature requests:
-
-```text
-info@ai-fairness.com
+*Hands-On Electroretinography in the Age of AI — Pipeline V2.3.2 — 18 May 2026*
