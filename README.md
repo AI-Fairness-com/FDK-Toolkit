@@ -3,7 +3,7 @@
 **No-code AI fairness auditing for professionals.**
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Documentation](https://img.shields.io/badge/docs-methodology.md-blue)](docs/methodology.md)
+[![Documentation](https://img.shields.io/badge/docs-methodology.light-yellow)](docs/methodology.md)
 
 ## What is FDK Toolkit?
 
