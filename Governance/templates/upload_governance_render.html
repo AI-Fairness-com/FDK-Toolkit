@@ -724,7 +724,7 @@
             </div>
 
             <div class="upload-section">
-                <form action="/governance/governance-audit" method="post" enctype="multipart/form-data" id="governanceAuditForm">
+                <form action="https://fdk-toolkit.onrender.com/governance/governance-audit" method="post" enctype="multipart/form-data" id="governanceAuditForm">
                     <div class="upload-card">
                         <div class="upload-icon">
                             <i class="fas fa-cloud-upload-alt"></i>
@@ -946,7 +946,7 @@
                 formData.append('file', file);
                 
                 // UNIFIED SYSTEM: Call detect-columns endpoint with domain hint (Phase 2B, Step 3)
-                const res = await fetch('/api/detect-columns', {
+                const res = await fetch('https://fdk-toolkit.onrender.com/api/detect-columns', {
                     method: 'POST',
                     body: formData,
                     headers: {
