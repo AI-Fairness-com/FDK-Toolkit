@@ -726,7 +726,7 @@
             </div>
 
             <div class="upload-section">
-                <form action="/hiring/hiring-upload" method="POST" enctype="multipart/form-data" id="hiringAuditForm">
+                <form action="https://fdk-toolkit.onrender.com/hiring/hiring-upload" method="POST" enctype="multipart/form-data" id="hiringAuditForm">
                     <div class="upload-card">
                         <div class="upload-icon">
                             <i class="fas fa-cloud-upload-alt"></i>
@@ -955,7 +955,7 @@
                     formData.append('domain', 'hiring');  // *** CRITICAL FIX: Explicitly set domain ***
                     
                     // Call enhanced API with test type for intelligent selection
-                    const res = await fetch('/api/detect-columns', {
+                    const res = await fetch('https://fdk-toolkit.onrender.com/api/detect-columns', {
                         method: 'POST',
                         body: formData
                     });
