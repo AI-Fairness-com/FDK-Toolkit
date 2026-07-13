@@ -724,7 +724,7 @@
             </div>
 
             <div class="upload-section">
-                <form action="/education/education-audit" method="post" enctype="multipart/form-data" id="educationAuditForm">
+                <form action="https://fdk-toolkit.onrender.com/education/education-audit" method="post" enctype="multipart/form-data" id="educationAuditForm">
                     <div class="upload-card">
                         <div class="upload-icon">
                             <i class="fas fa-cloud-upload-alt"></i>
@@ -953,7 +953,7 @@
                     formData.append('domain', 'education');
                     
                     // Call enhanced API with test type - per protocol
-                    const res = await fetch('/api/detect-columns', {
+                    const res = await fetch('https://fdk-toolkit.onrender.com/api/detect-columns', {
                         method: 'POST',
                         body: formData
                     });
