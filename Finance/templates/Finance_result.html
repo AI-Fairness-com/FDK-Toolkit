@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FDK Finance - Audit Results</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2453CC; /* Finance blue — the site's official Finance domain colour */
+            --primary-dark: #1B3D9E;
+            --secondary: #FFC93C; /* electric gold — signature accent shared across the FDK family */
+            --secondary-dark: #E0A800;
+            --accent: #00E0FF; /* cyan */
+            --accent2: #FF3D8A; /* magenta */
+            --node-gold: #FFDD5C;
+            --node-gold-deep: #E0A800;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --warning: #f39c12;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --gray: #7f8c8d;
+            --gradient: linear-gradient(135deg, #050A1F 0%, #1B3D9E 55%, #2453CC 100%);
+        }
+
+        .brand-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            padding: 18px 40px 14px;
+        }
+        .brand-mark {
+            flex-shrink: 0;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            object-fit: cover;
+            display: block;
+        }
+        .brand-mark-fallback {
+            background: var(--primary);
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+        }
+        .brand-name {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--primary);
+            line-height: 1.2;
+        }
+        .brand-reg {
+            font-size: 0.68rem;
+            color: var(--gray);
+            line-height: 1.3;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--gradient);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+            color: var(--dark);
+        }
+
+        .glass-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 25px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .hero-section {
+            background: linear-gradient(150deg, #020614 0%, #050A1F 40%, var(--primary-dark) 75%, var(--primary) 130%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--secondary), var(--accent), var(--accent2));
+        }
+
+        .hero-section::after {
+            content: '';
+            position: absolute;
+            bottom: -50px;
+            right: -50px;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(255, 201, 60, 0.15) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .electron-field {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+        .electron {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: var(--size);
+            height: var(--size);
+            margin: calc(var(--size) / -2);
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%, #FFF6D8 0%, var(--node-gold) 55%, var(--node-gold-deep) 100%);
+            box-shadow:
+                0 0 8px 2px var(--node-gold),
+                0 0 22px 6px color-mix(in srgb, var(--node-gold) 75%, transparent),
+                0 0 46px 14px color-mix(in srgb, var(--node-gold) 40%, transparent);
+            animation: electronOrbit var(--dur) cubic-bezier(0.45, 0, 0.55, 1) infinite,
+                       electronGlow calc(var(--dur) / 3) ease-in-out infinite;
+        }
+        @keyframes electronOrbit {
+            from { transform: translate(-50%, -50%) rotate(0deg) translateX(var(--rx)) rotate(0deg) scaleY(var(--squash)); }
+            to   { transform: translate(-50%, -50%) rotate(360deg) translateX(var(--rx)) rotate(-360deg) scaleY(var(--squash)); }
+        }
+        @keyframes electronGlow {
+            0%, 100% { opacity: 1; }
+            50%      { opacity: 0.55; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .electron { animation: none; }
+        }
+        @media (max-width: 768px) {
+            .electron-field { display: none; }
+        }
+
+        .hero-content-inner {
+            position: relative;
+            z-index: 2;
+        }
+
+        .logo-icon {
+            display: inline-block;
+            color: var(--secondary);
+        }
+        .logo:hover .logo-icon {
+            color: var(--accent);
+            transform: rotate(-8deg) scale(1.12);
+            text-shadow: 0 0 18px var(--accent);
+            transition: color 0.4s ease, transform 0.4s ease, text-shadow 0.4s ease;
+        }
+
+        .logo {
+            font-size: 2.6em;
+            font-weight: 800;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #fff, #ecf0f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .page-title {
+            font-size: 1.6em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: white;
+            opacity: 0.95;
+        }
+
+        .content-section {
+            padding: 50px 40px;
+        }
+
+        .status-card {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin-bottom: 40px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+            border-left: 6px solid var(--success);
+            text-align: center;
+        }
+
+        .status-error {
+            border-left-color: var(--error);
+            background: linear-gradient(135deg, #fff, #fdf2f2);
+        }
+
+        .status-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            color: var(--success);
+        }
+
+        .status-error .status-icon {
+            color: var(--error);
+        }
+
+        .status-title {
+            font-size: 1.8em;
+            color: var(--dark);
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .status-message {
+            color: var(--gray);
+            font-size: 1.1em;
+            line-height: 1.7;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin: 40px 0;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 30px 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border-top: 5px solid var(--primary);
+            transition: all 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .metric-number {
+            font-size: 2.5em;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .metric-label {
+            color: var(--dark);
+            font-weight: 600;
+            font-size: 1.1em;
+            margin-bottom: 8px;
+        }
+
+        .metric-description {
+            color: var(--gray);
+            font-size: 0.9em;
+        }
+
+        .results-summary {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            padding: 40px;
+            border-radius: 20px;
+            margin: 40px 0;
+            border-left: 6px solid var(--secondary);
+        }
+
+        .summary-title {
+            color: var(--dark);
+            font-size: 1.6em;
+            margin-bottom: 25px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .summary-title i {
+            color: var(--secondary);
+        }
+
+        .summary-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+            line-height: 1.8;
+            color: var(--dark);
+            white-space: pre-line;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        }
+
+        .download-section {
+            background: linear-gradient(135deg, var(--success), #229954);
+            color: white;
+            padding: 50px 40px;
+            border-radius: 20px;
+            text-align: center;
+            margin: 50px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .download-section::before {
+            content: '';
+            position: absolute;
+            top: -50px;
+            right: -50px;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .download-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .download-title {
+            font-size: 2em;
+            margin-bottom: 15px;
+            font-weight: 600;
+            position: relative;
+            z-index: 1;
+        }
+
+        .download-subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+            margin-bottom: 30px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .download-btn {
+            background: white;
+            color: var(--success);
+            border: none;
+            padding: 18px 45px;
+            font-size: 1.2em;
+            font-weight: 600;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            position: relative;
+            z-index: 1;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+        }
+
+        .new-audit-section {
+            text-align: center;
+            padding: 40px;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 20px;
+            margin-top: 40px;
+        }
+
+        .new-audit-title {
+            color: var(--dark);
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .new-audit-subtitle {
+            color: var(--gray);
+            margin-bottom: 25px;
+        }
+
+        .new-audit-btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            border: none;
+            padding: 15px 35px;
+            font-size: 1.1em;
+            font-weight: 600;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .new-audit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(36, 83, 204, 0.4);
+        }
+
+        /* ── FOOTER ── */
+        .site-footer {
+            background: linear-gradient(150deg, #020614 0%, #050A1F 60%, var(--primary-dark) 130%);
+            padding: 40px 40px 32px;
+        }
+        .footer-tiles {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+            margin-bottom: 30px;
+        }
+        .footer-tile {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px;
+            padding: 18px 20px;
+            transition: border-color 0.25s ease, transform 0.25s ease;
+        }
+        .footer-tile:hover { border-color: var(--secondary); transform: translateY(-3px); }
+        .footer-tile-icon { font-size: 1.2rem; color: var(--secondary); margin-bottom: 8px; }
+        .footer-tile-title { font-size: 0.85rem; font-weight: 700; color: #fff; margin-bottom: 4px; }
+        .footer-tile-text { font-size: 0.76rem; color: rgba(255,255,255,0.5); line-height: 1.55; }
+        .footer-bottom {
+            display: flex; align-items: center; justify-content: space-between;
+            padding-top: 22px; border-top: 1px solid rgba(255,255,255,0.12);
+            flex-wrap: wrap; gap: 12px;
+        }
+        .footer-legal { font-size: 0.73rem; color: rgba(255,255,255,0.4); line-height: 1.6; max-width: 560px; }
+        .footer-links { display: flex; gap: 16px; flex-wrap: wrap; }
+        .footer-link {
+            font-size: 0.78rem; color: rgba(255,255,255,0.55); text-decoration: none;
+            display: flex; align-items: center; gap: 5px; transition: color 0.2s ease;
+        }
+        .footer-link:hover { color: var(--accent); }
+
+        @media (max-width: 768px) {
+            .glass-container {
+                margin: 10px;
+                border-radius: 20px;
+            }
+
+            .hero-section, .content-section {
+                padding: 30px 20px;
+            }
+
+            .logo {
+                font-size: 2em;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .status-card, .results-summary {
+                padding: 30px 20px;
+            }
+
+            .footer-tiles { grid-template-columns: 1fr; }
+            .footer-bottom { flex-direction: column; align-items: flex-start; }
+            .site-footer { padding: 32px 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="glass-container">
+  <!-- ── BRAND BAR ─────────────────────────────────────────────── -->
+  <div class="brand-bar" role="banner">
+    <img class="brand-mark" src="https://ai-fairness.com/wp-content/uploads/2026/06/Logo.png" alt="AI Fairness CIO logo"
+         onerror="this.outerHTML='&lt;div class=&quot;brand-mark brand-mark-fallback&quot; aria-hidden=&quot;true&quot;&gt;Fi&lt;/div&gt;'" />
+    <div class="brand-text">
+      <div class="brand-name">AI Fairness CIO</div>
+      <div class="brand-reg">Charity Commission for England and Wales &middot; Registered Charity No. 1218464</div>
+    </div>
+  </div>
+        <div class="hero-section">
+            <div class="electron-field" aria-hidden="true">
+                <div class="electron" style="--size:8px;  --rx:60px;  --dur:8s;  --squash:0.55;"></div>
+                <div class="electron" style="--size:6px;  --rx:95px;  --dur:13s; --squash:0.8;  animation-direction:reverse, normal;"></div>
+                <div class="electron" style="--size:9px;  --rx:130px; --dur:11s; --squash:0.4;"></div>
+                <div class="electron" style="--size:5px;  --rx:165px; --dur:19s; --squash:0.7;  animation-direction:reverse, normal;"></div>
+                <div class="electron" style="--size:7px;  --rx:200px; --dur:24s; --squash:0.5;"></div>
+                <div class="electron" style="--size:4px;  --rx:235px; --dur:16s; --squash:0.85; animation-direction:reverse, normal;"></div>
+            </div>
+            <div class="hero-content-inner">
+                <div class="logo">
+                    <svg class="logo-icon" width="0.85em" height="0.85em" viewBox="0 0 24 24" fill="none" style="vertical-align: -0.08em;" aria-hidden="true"><path d="M3 17 L9 11 L13 15 L21 5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 5 L21 5 L21 11" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg> FDK™ Finance
+                </div>
+                <div class="page-title">{{ title }}</div>
+            </div>
+        </div>
+
+        <div class="content-section">
+            {% if "Error" in title or "Failed" in title %}
+            <div class="status-card status-error">
+                <div class="status-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="status-title">{{ title }}</div>
+                <div class="status-message">{{ message }}</div>
+            </div>
+            {% else %}
+            <div class="status-card">
+                <div class="status-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="status-title">{{ title }}</div>
+                <div class="status-message">{{ message }}</div>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-number">30</div>
+                    <div class="metric-label">Fairness Metrics</div>
+                    <div class="metric-description">Comprehensive financial equity analysis</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-number">7</div>
+                    <div class="metric-label">Metric Categories</div>
+                    <div class="metric-description">Specialized finance domains</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-number">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <div class="metric-label">Regulatory Standards</div>
+                    <div class="metric-description">Financial compliance</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-number">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <div class="metric-label">Full Analysis</div>
+                    <div class="metric-description">Complete equity assessment</div>
+                </div>
+            </div>
+
+            {% if summary %}
+            <div class="results-summary">
+                <div class="summary-title">
+                    <i class="fas fa-chart-pie"></i> Financial Equity Analysis Summary
+                </div>
+                <div class="summary-content">
+                    {{ summary | safe }}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if report_filename %}
+            <div class="download-section">
+                <div class="download-icon">
+                    <i class="fas fa-file-download"></i>
+                </div>
+                <div class="download-title">Download Complete Finance Audit Report</div>
+                <div class="download-subtitle">
+                    Your comprehensive fairness audit report is ready for regulatory review and financial compliance documentation.
+                </div>
+                <a href="{{ url_for('finance.download_finance_report', filename=report_filename) }}" class="download-btn">
+                    <i class="fas fa-download"></i> DOWNLOAD FINANCE AUDIT REPORT
+                </a>
+            </div>
+            {% endif %}
+            {% endif %}
+
+            <div class="new-audit-section">
+                <div class="new-audit-title">Start New Finance Fairness Audit</div>
+                <div class="new-audit-subtitle">
+                    Upload a different finance dataset or re-analyze with new regulatory parameters
+                </div>
+                <a href="{{ url_for('finance.finance_upload_page') }}" class="new-audit-btn">
+                    <i class="fas fa-plus-circle"></i> NEW FINANCE AUDIT
+                </a>
+            </div>
+        </div>
+
+    <footer class="site-footer">
+        <div class="footer-tiles">
+            <div class="footer-tile">
+                <div class="footer-tile-icon" aria-hidden="true"><i class="fas fa-chart-line"></i></div>
+                <div class="footer-tile-title">30 Financial Fairness Metrics</div>
+                <div class="footer-tile-text">Credit scoring, loan approval, and financial service access disparities measured across demographic groups, aligned with fair lending laws.</div>
+            </div>
+            <div class="footer-tile">
+                <div class="footer-tile-icon" aria-hidden="true"><i class="fas fa-wand-magic-sparkles"></i></div>
+                <div class="footer-tile-title">Intelligent Column Detection</div>
+                <div class="footer-tile-text">FDK automatically identifies the appropriate target column from your dataset, with manual override always available if needed.</div>
+            </div>
+            <div class="footer-tile">
+                <div class="footer-tile-icon" aria-hidden="true"><i class="fas fa-shield-alt"></i></div>
+                <div class="footer-tile-title">Regulatory Compliance Aligned</div>
+                <div class="footer-tile-text">Metrics mapped to financial regulations and consumer protection standards — supporting evidence-based fair lending review.</div>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p class="footer-legal">
+                This tool provides fairness assessment for research and analytical purposes only and does not constitute financial or regulatory compliance advice.
+                AI Fairness CIO &middot; Charity Commission for England and Wales &middot; Registered Charity No. 1218464.
+            </p>
+            <div class="footer-links">
+                <a href="https://ai-fairness.com/finance-compliance/" class="footer-link">
+                    <i class="fas fa-shield-alt" aria-hidden="true"></i> Compliance
+                </a>
+                <a href="https://ai-fairness.com/finance-equity-analytics/" class="footer-link">
+                    <i class="fas fa-chart-pie" aria-hidden="true"></i> Equity Analytics
+                </a>
+                <a href="mailto:hello@ai-fairness.com" class="footer-link">
+                    <i class="fas fa-envelope" aria-hidden="true"></i> Contact
+                </a>
+            </div>
+        </div>
+    </footer>
+    </div>
+</body>
+</html>
