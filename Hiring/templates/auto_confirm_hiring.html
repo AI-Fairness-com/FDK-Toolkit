@@ -13,19 +13,61 @@
         }
 
         :root {
-            --primary: #1ECBD8;
-            --secondary: #FBBC04;
-            --accent: #3498db;
+            --primary: #C878CC; /* Hiring Orchid — the site's official Hiring domain colour */
+            --primary-dark: #A73DAC;
+            --secondary: #FFC93C; /* electric gold — signature accent shared across the FDK family */
+            --secondary-dark: #E0A800;
+            --accent: #00E0FF; /* cyan */
+            --accent2: #FF3D8A; /* magenta */
+            --node-gold: #FFDD5C;
+            --node-gold-deep: #E0A800;
             --success: #27ae60;
             --warning: #f39c12;
             --light: #ecf0f1;
             --dark: #2c3e50;
             --gray: #7f8c8d;
+            --gradient: linear-gradient(135deg, #140A15 0%, #A73DAC 55%, #C878CC 100%);
+        }
+
+        .brand-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            padding: 18px 40px 14px;
+        }
+        .brand-mark {
+            flex-shrink: 0;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            object-fit: cover;
+            display: block;
+        }
+        .brand-mark-fallback {
+            background: var(--primary);
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+        }
+        .brand-name {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--primary);
+            line-height: 1.2;
+        }
+        .brand-reg {
+            font-size: 0.68rem;
+            color: var(--gray);
+            line-height: 1.3;
         }
 
         body {
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--gradient);
             min-height: 100vh;
             padding: 20px;
             line-height: 1.6;
@@ -43,7 +85,7 @@
         }
 
         .hero-section {
-            background: linear-gradient(135deg, var(--primary), #19b1bd);
+            background: linear-gradient(150deg, #140A15 0%, #301631 40%, var(--primary-dark) 75%, var(--primary) 130%);
             color: white;
             padding: 50px 40px;
             text-align: center;
@@ -58,23 +100,93 @@
             left: 0;
             right: 0;
             height: 4px;
-            background: linear-gradient(90deg, var(--secondary), var(--accent), #23e0ef);
+            background: linear-gradient(90deg, var(--secondary), var(--accent), var(--accent2));
+        }
+
+        .hero-section::after {
+            content: '';
+            position: absolute;
+            bottom: -50px;
+            right: -50px;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(200, 120, 204, 0.18) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .electron-field {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+        .electron {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: var(--size);
+            height: var(--size);
+            margin: calc(var(--size) / -2);
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%, #FFF6D8 0%, var(--node-gold) 55%, var(--node-gold-deep) 100%);
+            box-shadow:
+                0 0 8px 2px var(--node-gold),
+                0 0 22px 6px color-mix(in srgb, var(--node-gold) 75%, transparent),
+                0 0 46px 14px color-mix(in srgb, var(--node-gold) 40%, transparent);
+            animation: electronOrbit var(--dur) cubic-bezier(0.45, 0, 0.55, 1) infinite,
+                       electronGlow calc(var(--dur) / 3) ease-in-out infinite;
+        }
+        @keyframes electronOrbit {
+            from { transform: translate(-50%, -50%) rotate(0deg) translateX(var(--rx)) rotate(0deg) scaleY(var(--squash)); }
+            to   { transform: translate(-50%, -50%) rotate(360deg) translateX(var(--rx)) rotate(-360deg) scaleY(var(--squash)); }
+        }
+        @keyframes electronGlow {
+            0%, 100% { opacity: 1; }
+            50%      { opacity: 0.55; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .electron { animation: none; }
+        }
+        @media (max-width: 768px) {
+            .electron-field { display: none; }
+        }
+
+        .hero-content-inner {
+            position: relative;
+            z-index: 2;
+        }
+
+        .logo-icon {
+            display: inline-block;
+            color: #FFC93C;
+            transition: transform 0.4s ease, filter 0.4s ease, color 0.4s ease;
+        }
+        .logo:hover .logo-icon {
+            color: #C878CC;
+            transform: rotate(-8deg) scale(1.12);
+            filter: drop-shadow(0 0 12px var(--primary));
         }
 
         .logo {
-            font-size: 3em;
+            font-size: 2.6em;
             font-weight: 800;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
             background: linear-gradient(135deg, #fff, #ecf0f1);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
 
         .page-title {
-            font-size: 2em;
+            font-size: 1.6em;
             font-weight: 600;
             margin-bottom: 10px;
             color: white;
+            opacity: 0.95;
         }
 
         .content-section {
@@ -85,7 +197,7 @@
             background: linear-gradient(135deg, #f8f9fa, #e9ecef);
             padding: 25px;
             border-radius: 15px;
-            margin: 25px 0;
+            margin: 0 0 25px;
             border-left: 6px solid var(--accent);
             font-family: monospace;
             font-size: 1.1em;
@@ -99,76 +211,42 @@
             padding: 15px 30px;
             border-radius: 30px;
             display: inline-block;
-            margin: 15px 0;
+            margin: 0 8px 15px 0;
             font-weight: 600;
             box-shadow: 0 8px 25px rgba(39, 174, 96, 0.3);
         }
 
-        .detection-info {
-            background: white;
+        .description-card {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
             padding: 35px;
             border-radius: 20px;
             margin: 30px 0;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-            border: 2px solid var(--accent);
-        }
-
-        .mapping-section {
-            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
-            padding: 35px;
-            border-radius: 20px;
-            margin: 30px 0;
-            border: 2px solid var(--warning);
-        }
-
-        .mapping-item {
-            background: white;
-            padding: 20px;
-            margin: 15px 0;
-            border-radius: 12px;
             border-left: 6px solid var(--secondary);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
         }
 
-        .run-audit-section {
-            text-align: center;
-            margin: 50px 0;
-            padding: 50px;
-            background: linear-gradient(135deg, var(--secondary), #e8ab03);
-            color: white;
-            border-radius: 25px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .run-audit-section::before {
-            content: '';
-            position: absolute;
-            top: -50px;
-            right: -50px;
-            width: 200px;
-            height: 200px;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-            border-radius: 50%;
-        }
-
-        .run-btn {
-            background: white;
-            color: var(--secondary);
-            border: none;
-            padding: 20px 60px;
+        .description-card h3 {
+            color: var(--dark);
             font-size: 1.3em;
-            font-weight: 700;
-            border-radius: 35px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-            letter-spacing: 0.5px;
+            margin-bottom: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
-        .run-btn:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+        .description-card h3 i {
+            color: var(--secondary);
+        }
+
+        .description-card p, .description-card li {
+            color: var(--gray);
+            font-size: 1em;
+            line-height: 1.7;
+        }
+
+        .description-card ul {
+            margin: 12px 0 0 22px;
         }
 
         .stats-grid {
@@ -194,6 +272,48 @@
             margin-bottom: 8px;
         }
 
+        .mapping-section {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            padding: 35px;
+            border-radius: 20px;
+            margin: 30px 0;
+            border-left: 6px solid var(--secondary);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        }
+
+        .mapping-section h3 {
+            color: var(--dark);
+            font-size: 1.3em;
+            margin-bottom: 10px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .mapping-section h3 i {
+            color: var(--secondary);
+        }
+
+        .mapping-section > p {
+            color: var(--gray);
+            margin-bottom: 20px;
+        }
+
+        .mapping-item {
+            background: white;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 12px;
+            border-left: 6px solid var(--primary);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+
+        .mapping-item strong {
+            color: var(--dark);
+            font-size: 1.05em;
+        }
+
         .reasoning {
             font-size: 0.9em;
             color: var(--gray);
@@ -201,53 +321,169 @@
             font-style: italic;
         }
 
+        .run-audit-section {
+            text-align: center;
+            margin: 50px 0 0;
+            padding: 50px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            border-radius: 25px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .run-audit-section::before {
+            content: '';
+            position: absolute;
+            top: -50px;
+            right: -50px;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .run-audit-section h2 {
+            position: relative;
+            z-index: 1;
+            font-size: 1.6em;
+            margin-bottom: 12px;
+        }
+
+        .run-audit-section p {
+            position: relative;
+            z-index: 1;
+            opacity: 0.92;
+            margin-bottom: 6px;
+        }
+
+        .run-btn {
+            position: relative;
+            z-index: 1;
+            background: linear-gradient(135deg, var(--secondary), var(--secondary-dark));
+            color: var(--dark);
+            border: none;
+            padding: 20px 60px;
+            font-size: 1.2em;
+            font-weight: 700;
+            border-radius: 35px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+            letter-spacing: 0.5px;
+            margin-top: 20px;
+        }
+
+        .run-btn:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.35);
+        }
+
+        /* ── FOOTER ── */
+        .site-footer {
+            background: linear-gradient(150deg, #140A15 0%, #301631 60%, var(--primary-dark) 130%);
+            padding: 40px 40px 32px;
+        }
+        .footer-tiles {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+            margin-bottom: 30px;
+        }
+        .footer-tile {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px;
+            padding: 18px 20px;
+            transition: border-color 0.25s ease, transform 0.25s ease;
+        }
+        .footer-tile:hover { border-color: var(--secondary); transform: translateY(-3px); }
+        .footer-tile-icon { font-size: 1.2rem; color: var(--secondary); margin-bottom: 8px; }
+        .footer-tile-title { font-size: 0.85rem; font-weight: 700; color: #fff; margin-bottom: 4px; }
+        .footer-tile-text { font-size: 0.76rem; color: rgba(255,255,255,0.5); line-height: 1.55; }
+        .footer-bottom {
+            display: flex; align-items: center; justify-content: space-between;
+            padding-top: 22px; border-top: 1px solid rgba(255,255,255,0.12);
+            flex-wrap: wrap; gap: 12px;
+        }
+        .footer-legal { font-size: 0.73rem; color: rgba(255,255,255,0.4); line-height: 1.6; max-width: 560px; }
+        .footer-links { display: flex; gap: 16px; flex-wrap: wrap; }
+        .footer-link {
+            font-size: 0.78rem; color: rgba(255,255,255,0.55); text-decoration: none;
+            display: flex; align-items: center; gap: 5px; transition: color 0.2s ease;
+        }
+        .footer-link:hover { color: var(--accent); }
+
         @media (max-width: 768px) {
             .glass-container {
                 margin: 10px;
                 border-radius: 20px;
             }
-            
+
             .hero-section, .content-section {
                 padding: 30px 20px;
             }
-            
+
             .logo {
-                font-size: 2.5em;
+                font-size: 2em;
             }
-            
+
             .run-audit-section {
                 padding: 30px 20px;
             }
-            
+
             .stats-grid {
                 grid-template-columns: 1fr;
             }
+
+            .footer-tiles { grid-template-columns: 1fr; }
+            .footer-bottom { flex-direction: column; align-items: flex-start; }
+            .site-footer { padding: 32px 20px; }
         }
     </style>
 </head>
 <body>
     <div class="glass-container">
+  <!-- ── BRAND BAR ─────────────────────────────────────────────── -->
+  <div class="brand-bar" role="banner">
+    <img class="brand-mark" src="https://ai-fairness.com/wp-content/uploads/2026/06/Logo.png" alt="AI Fairness CIO logo"
+         onerror="this.outerHTML='&lt;div class=&quot;brand-mark brand-mark-fallback&quot; aria-hidden=&quot;true&quot;&gt;Fi&lt;/div&gt;'" />
+    <div class="brand-text">
+      <div class="brand-name">AI Fairness CIO</div>
+      <div class="brand-reg">Charity Commission for England and Wales &middot; Registered Charity No. 1218464</div>
+    </div>
+  </div>
         <div class="hero-section">
-            <div class="logo">
-                <i class="fas fa-user-tie" style="color: #FBBC04;"></i> FDK™ Hiring
+            <div class="electron-field" aria-hidden="true">
+                <div class="electron" style="--size:8px;  --rx:60px;  --dur:8s;  --squash:0.55;"></div>
+                <div class="electron" style="--size:6px;  --rx:95px;  --dur:13s; --squash:0.8;  animation-direction:reverse, normal;"></div>
+                <div class="electron" style="--size:9px;  --rx:130px; --dur:11s; --squash:0.4;"></div>
+                <div class="electron" style="--size:5px;  --rx:165px; --dur:19s; --squash:0.7;  animation-direction:reverse, normal;"></div>
+                <div class="electron" style="--size:7px;  --rx:200px; --dur:24s; --squash:0.5;"></div>
+                <div class="electron" style="--size:4px;  --rx:235px; --dur:16s; --squash:0.85; animation-direction:reverse, normal;"></div>
             </div>
-            <div class="page-title">Hiring Dataset Verification</div>
+            <div class="hero-content-inner">
+                <div class="logo">
+                    <svg class="logo-icon" width="0.9em" height="0.9em" viewBox="0 0 24 24" fill="none" style="vertical-align: -0.1em;" aria-hidden="true"><path d="M8 3 H16 V6 H8 Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M6 5 H18 V21 H6 Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 13 L11 15.5 L16 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> FDK™ Hiring
+                </div>
+                <div class="page-title">Hiring Dataset Verification</div>
+            </div>
         </div>
 
         <div class="content-section">
             <div class="filename-card">
                 <i class="fas fa-file-csv"></i> Dataset: {{ filename }}
             </div>
-            
+
             <div class="success-badge">
                 <i class="fas fa-check-circle"></i> Successfully uploaded and analyzed
             </div>
-            
+
             <div class="success-badge">
                 <i class="fas fa-robot"></i> Hiring Auto-Detection Successful!
             </div>
 
-            <div class="detection-info">
+            <div class="description-card">
                 <h3><i class="fas fa-search"></i> How Our Hiring Detection Works:</h3>
                 <p>Our system scans your dataset and intelligently identifies:</p>
                 <ul>
@@ -276,25 +512,25 @@
             <div class="mapping-section">
                 <h3><i class="fas fa-map-marked-alt"></i> Detected Hiring Column Mapping:</h3>
                 <p>Your hiring fairness audit will be based on these automatically selected features from <strong>{{ filename }}</strong>:</p>
-                
+
                 <div class="mapping-item">
                     <strong>{{ suggested_mappings.group }}</strong>
                     <div class="reasoning">→ Applicant Groups for Fairness Analysis</div>
                     <div class="reasoning"><em>{{ column_reasoning[suggested_mappings.group] }}</em></div>
                 </div>
-                
+
                 <div class="mapping-item">
                     <strong>{{ suggested_mappings.y_true }}</strong>
                     <div class="reasoning">→ Hiring Outcomes & Selection Decisions</div>
                     <div class="reasoning"><em>{{ column_reasoning[suggested_mappings.y_true] }}</em></div>
                 </div>
-                
+
                 <div class="mapping-item">
                     <strong>{{ suggested_mappings.y_pred }}</strong>
                     <div class="reasoning">→ Screening Assessments & Algorithm Predictions</div>
                     <div class="reasoning"><em>{{ column_reasoning[suggested_mappings.y_pred] }}</em></div>
                 </div>
-                
+
                 {% if suggested_mappings.y_prob %}
                 <div class="mapping-item">
                     <strong>{{ suggested_mappings.y_prob }}</strong>
@@ -308,7 +544,7 @@
                 <h2><i class="fas fa-rocket"></i> Run Hiring Fairness Audit on {{ filename }}</h2>
                 <p>34 hiring fairness metrics will be analyzed using the detected column mapping from your uploaded dataset</p>
                 <p><em>Hiring Domain Coverage • EEO Compliance • Automated Detection</em></p>
-                
+
                 <form action="{{ url_for('hiring.run_hiring_audit_with_mapping') }}" method="get">
                     <input type="hidden" name="filename" value="{{ filename }}">
                     <input type="hidden" name="group_col" value="{{ suggested_mappings.group }}">
@@ -323,6 +559,44 @@
                 </form>
             </div>
         </div>
+
+    <footer class="site-footer">
+        <div class="footer-tiles">
+            <div class="footer-tile">
+                <div class="footer-tile-icon" aria-hidden="true"><i class="fas fa-chart-line"></i></div>
+                <div class="footer-tile-title">34 Hiring Fairness Metrics</div>
+                <div class="footer-tile-text">Resume screening, interview selection, and hiring-decision disparities measured across candidate demographics, aligned with EEOC and employment-law standards.</div>
+            </div>
+            <div class="footer-tile">
+                <div class="footer-tile-icon" aria-hidden="true"><i class="fas fa-wand-magic-sparkles"></i></div>
+                <div class="footer-tile-title">Intelligent Column Detection</div>
+                <div class="footer-tile-text">FDK automatically identifies the appropriate target column from your dataset based on the selected test type — no manual configuration required.</div>
+            </div>
+            <div class="footer-tile">
+                <div class="footer-tile-icon" aria-hidden="true"><i class="fas fa-users"></i></div>
+                <div class="footer-tile-title">HR Compliance Aligned</div>
+                <div class="footer-tile-text">Metrics mapped to employment laws, EEOC guidelines, and workplace diversity standards — supporting evidence-based recruitment review.</div>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p class="footer-legal">
+                This tool provides fairness assessment for research and analytical purposes only and does not constitute legal or HR compliance advice.
+                AI Fairness CIO &middot; Charity Commission for England and Wales &middot; Registered Charity No. 1218464.
+            </p>
+            <div class="footer-links">
+                <a href="https://ai-fairness.com/hiring-compliance/" class="footer-link">
+                    <i class="fas fa-users" aria-hidden="true"></i> Compliance
+                </a>
+                <a href="https://ai-fairness.com/hiring-equity-analytics/" class="footer-link">
+                    <i class="fas fa-chart-pie" aria-hidden="true"></i> Equity Analytics
+                </a>
+                <a href="mailto:hello@ai-fairness.com" class="footer-link">
+                    <i class="fas fa-envelope" aria-hidden="true"></i> Contact
+                </a>
+            </div>
+        </div>
+    </footer>
     </div>
 </body>
 </html>
