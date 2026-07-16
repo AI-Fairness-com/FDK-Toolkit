@@ -1,6 +1,6 @@
 # ================================================================
 # FDK Governance Pipeline - PRODUCTION READY
-# 27 Governance Fairness Metrics
+# 27 Governance Fairness Metrics - MIT Licensed
 # ================================================================
 
 import pandas as pd
@@ -536,15 +536,25 @@ class GovernanceFairnessPipeline:
             
             # Missingness Bias Index
             numeric_cols = df.select_dtypes(include=[np.number]).columns
-            missingness_scores = []
-            
-            for col in numeric_cols:
-                if col not in ['y_true', 'y_pred', 'y_prob']:
-                    col_missing = df[col].isna().mean()
-                    missingness_scores.append(col_missing)
-            
-            if missingness_scores:
-                metrics['missingness_bias_index'] = float(np.mean(missingness_scores))
+            feature_cols_for_missingness = [c for c in numeric_cols if c not in ['y_true', 'y_pred', 'y_prob']]
+
+            if feature_cols_for_missingness:
+                group_missingness_disparities = []
+                for col in feature_cols_for_missingness:
+                    group_missingness = {}
+                    for group in groups:
+                        group_mask = df['group'] == group
+                        group_missingness[group] = df[group_mask][col].isna().mean()
+                    if len(group_missingness) > 1:
+                        disparity = max(group_missingness.values()) - min(group_missingness.values())
+                        group_missingness_disparities.append(disparity)
+
+                if group_missingness_disparities:
+                    metrics['missingness_bias_index'] = float(np.mean(group_missingness_disparities))
+                else:
+                    metrics['missingness_bias_index'] = 0.0
+            else:
+                metrics['missingness_bias_index'] = 0.0
             
             # Data Coverage Gap (corrected implementation)
             coverage_gaps = []
