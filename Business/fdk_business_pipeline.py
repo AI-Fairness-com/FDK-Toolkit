@@ -1,6 +1,6 @@
 # ================================================================
 # FDK BUSINESS PIPELINE - PRODUCTION READY
-# 56 Business Fairness Metrics - Fully Implemented
+# 60 Business Fairness Metrics - Fully Implemented
 # Maintains backward compatibility with original function interface
 # ================================================================
 
@@ -15,7 +15,7 @@ import json
 import warnings
 warnings.filterwarnings('ignore')
 
-# Business-specific metrics configuration - 56 METRICS
+# Business-specific metrics configuration - 60 METRICS
 BUSINESS_METRICS_CONFIG = {
     'core_group_fairness': [
         'statistical_parity_difference', 'statistical_parity_ratio',
@@ -198,7 +198,7 @@ def calculate_core_group_fairness(df: pd.DataFrame) -> Dict[str, Any]:
     return metrics
 
 def calculate_performance_error_fairness(df: pd.DataFrame) -> Dict[str, Any]:
-    """Calculate performance and error rate fairness - 18 metrics"""
+    """Calculate performance and error rate fairness - 19 metrics"""
     metrics = {}
     
     try:
@@ -706,73 +706,65 @@ def calculate_causal_counterfactual_fairness(df: pd.DataFrame) -> Dict[str, Any]
 def calculate_temporal_operational_fairness(df: pd.DataFrame) -> Dict[str, Any]:
     """Calculate temporal and operational fairness - 3 metrics"""
     metrics = {}
-    
+
+    if 'timestamp' not in df.columns:
+        metrics['temporal_fairness_consistency'] = None
+        metrics['long_term_outcome_parity'] = None
+        metrics['dynamic_policy_fairness'] = None
+        return metrics
+
     try:
-        # For temporal analysis, we need multiple time periods
-        # Using data splitting as proxy for temporal analysis
-        if len(df) > 20:
-            # Split data to simulate temporal segments
-            df1 = df.sample(frac=0.5, random_state=42)
-            df2 = df.drop(df1.index)
-            
-            # Calculate key metrics for both segments
-            key_metrics_1 = {
-                'statistical_parity_difference': calculate_core_group_fairness(df1).get('statistical_parity_difference', 0),
-                'true_positive_rate_difference': calculate_performance_error_fairness(df1).get('true_positive_rate_difference', 0),
-                'error_disparity_by_subgroup': calculate_customer_segmentation_subgroup_fairness(df1).get('error_disparity_by_subgroup', 0)
-            }
-            
-            key_metrics_2 = {
-                'statistical_parity_difference': calculate_core_group_fairness(df2).get('statistical_parity_difference', 0),
-                'true_positive_rate_difference': calculate_performance_error_fairness(df2).get('true_positive_rate_difference', 0),
-                'error_disparity_by_subgroup': calculate_customer_segmentation_subgroup_fairness(df2).get('error_disparity_by_subgroup', 0)
-            }
-            
-            # Temporal consistency (1 - average change in key metrics)
-            changes = []
-            for metric in key_metrics_1:
-                val1 = key_metrics_1.get(metric, 0)
-                val2 = key_metrics_2.get(metric, 0)
-                changes.append(abs(val1 - val2))
-            
-            temporal_consistency = 1 - np.mean(changes) if changes else 0.9
-            metrics['temporal_fairness_consistency'] = float(max(0, temporal_consistency))
-            
-            # Long-term outcome parity (stability of base rates)
-            base_rate1 = df1['y_true'].mean()
-            base_rate2 = df2['y_true'].mean()
-            outcome_parity = 1 - abs(base_rate1 - base_rate2)
-            metrics['long_term_outcome_parity'] = float(max(0, outcome_parity))
-            
-            # ADDED: Dynamic Policy Fairness - monitors fairness stability in adaptive systems
-            policy_changes = []
-            for group in df['group'].unique():
-                group_data1 = df1[df1['group'] == group]
-                group_data2 = df2[df2['group'] == group]
-                
-                if len(group_data1) > 0 and len(group_data2) > 0:
-                    # Measure change in selection rates (proxy for policy changes)
-                    selection_rate1 = group_data1['y_pred'].mean()
-                    selection_rate2 = group_data2['y_pred'].mean()
-                    policy_change = abs(selection_rate1 - selection_rate2)
-                    policy_changes.append(policy_change)
-            
-            dynamic_fairness = 1 - np.mean(policy_changes) if policy_changes else 0.95
-            metrics['dynamic_policy_fairness'] = float(max(0, dynamic_fairness))
-            
+        df_sorted = df.copy()
+        df_sorted['timestamp'] = pd.to_datetime(df_sorted['timestamp'])
+        df_sorted = df_sorted.sort_values('timestamp')
+
+        time_windows = pd.date_range(
+            start=df_sorted['timestamp'].min(),
+            end=df_sorted['timestamp'].max(),
+            freq='D'
+        )
+
+        composite_scores = []
+        base_rates = []
+        group_selection_rates = {group: [] for group in df['group'].unique()}
+
+        for i in range(len(time_windows) - 1):
+            window_data = df_sorted[
+                (df_sorted['timestamp'] >= time_windows[i]) &
+                (df_sorted['timestamp'] < time_windows[i + 1])
+            ]
+            if len(window_data) > 10:  # minimum samples per window
+                window_metrics = calculate_business_metrics(window_data)
+                composite_scores.append(window_metrics.get('composite_bias_score', 0.0))
+                base_rates.append(window_data['y_true'].mean())
+                for group in group_selection_rates:
+                    group_data = window_data[window_data['group'] == group]
+                    if len(group_data) > 0:
+                        group_selection_rates[group].append(group_data['y_pred'].mean())
+
+        if len(composite_scores) > 1:
+            metrics['temporal_fairness_consistency'] = float(max(0, 1 - np.std(composite_scores)))
         else:
-            # Insufficient data for proper temporal analysis
-            metrics['temporal_fairness_consistency'] = 0.9
-            metrics['long_term_outcome_parity'] = 0.95
-            metrics['dynamic_policy_fairness'] = 0.95
-            
-    except Exception as e:
-        metrics.update({
-            'temporal_fairness_consistency': 0.9,
-            'long_term_outcome_parity': 0.95,
-            'dynamic_policy_fairness': 0.95
-        })
-    
+            metrics['temporal_fairness_consistency'] = None
+
+        if len(base_rates) > 1:
+            metrics['long_term_outcome_parity'] = float(max(0, 1 - np.std(base_rates)))
+        else:
+            metrics['long_term_outcome_parity'] = None
+
+        policy_stability_scores = [
+            1 - np.std(rates) for rates in group_selection_rates.values() if len(rates) > 1
+        ]
+        if policy_stability_scores:
+            metrics['dynamic_policy_fairness'] = float(max(0, np.mean(policy_stability_scores)))
+        else:
+            metrics['dynamic_policy_fairness'] = None
+
+    except Exception:
+        metrics['temporal_fairness_consistency'] = None
+        metrics['long_term_outcome_parity'] = None
+        metrics['dynamic_policy_fairness'] = None
+
     return metrics
 
 def calculate_composite_bias_score(metrics: Dict[str, Any]) -> float:
@@ -845,7 +837,7 @@ def run_pipeline(df: pd.DataFrame, save_to_disk: bool = True) -> Dict[str, Any]:
         # Build comprehensive results
         results = {
             "domain": "business",
-            "metrics_calculated": 56,  # Updated to 56 metrics
+            "metrics_calculated": 60,
             "metric_categories": BUSINESS_METRICS_CONFIG,
             "fairness_metrics": business_metrics,
             "summary": {
@@ -882,7 +874,7 @@ def run_audit_from_request(audit_request: Dict[str, Any]) -> Dict[str, Any]:
         return {
             "status": "success",
             "domain": "business",
-            "metrics_calculated": 56,  # Updated to 56 metrics
+            "metrics_calculated": 60,
             "results": results
         }
     except Exception as e:
@@ -932,16 +924,16 @@ if __name__ == "__main__":
     print(f"Composite Bias Score: {results['summary']['composite_bias_score']:.4f}")
     print(f"Assessment: {results['summary']['overall_assessment']}")
     
-    # Verify all 56 metrics are present
+    # Verify all 60 metrics are present
     calculated_metrics = results['fairness_metrics']
-    expected_metrics = 56
+    expected_metrics = 60
     actual_metrics = len([k for k in calculated_metrics.keys() if not isinstance(calculated_metrics[k], dict)])
     
     print(f"Expected Metrics: {expected_metrics}")
     print(f"Actual Metrics Calculated: {actual_metrics}")
     
     if actual_metrics >= expected_metrics:
-        print("✅ SUCCESS: All 56 metrics implemented and working!")
+        print("✅ SUCCESS: All 60 metrics implemented and working!")
     else:
         print(f"⚠️  WARNING: {actual_metrics}/{expected_metrics} metrics calculated")
     
