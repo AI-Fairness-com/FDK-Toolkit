@@ -266,20 +266,24 @@ def calculate_educational_specific_metrics(df: pd.DataFrame) -> Dict[str, Any]:
     
     metrics['academic_calibration_gap'] = float(max(calibration_gaps)) if calibration_gaps else 0.0
     
-    # 10. Educational Mobility Index (simplified)
-    group_performance = []
-    for group in groups:
-        group_mask = df['group'] == group
-        performance = df[group_mask]['y_true'].mean()  # Actual success rate
-        group_performance.append(performance)
-    
-    if len(group_performance) >= 2:
-        # Measure correlation between group advantage and performance
-        advantage_rank = range(len(groups))  # Simplified advantage ranking
-        mobility_corr = np.corrcoef(advantage_rank, group_performance)[0,1]
-        metrics['educational_mobility_index'] = float(mobility_corr) if not np.isnan(mobility_corr) else 0.0
+    # 10. Educational Mobility Index
+    if 'advantage_rank' in df.columns:
+        group_performance = []
+        group_advantage = []
+        for group in groups:
+            group_mask = df['group'] == group
+            performance = df[group_mask]['y_true'].mean()
+            advantage = df[group_mask]['advantage_rank'].mean()
+            group_performance.append(performance)
+            group_advantage.append(advantage)
+
+        if len(group_performance) >= 2:
+            mobility_corr = np.corrcoef(group_advantage, group_performance)[0, 1]
+            metrics['educational_mobility_index'] = float(mobility_corr) if not np.isnan(mobility_corr) else None
+        else:
+            metrics['educational_mobility_index'] = None
     else:
-        metrics['educational_mobility_index'] = 0.0
+        metrics['educational_mobility_index'] = None
     
     # 11. Opportunity Access Parity
     selection_rates = [df[df['group'] == g]['y_pred'].mean() for g in groups]
@@ -625,7 +629,28 @@ def calculate_validation_robustness_metrics(df: pd.DataFrame, core_metrics: Dict
     metrics['temporal_fairness_stability'] = float(np.mean(bootstrap_stability)) if bootstrap_stability else 0.0
     
     # 26. Model Explanation Parity
-    metrics['model_explanation_parity'] = 0.0  # Placeholder for speed
+    feature_cols = [col for col in df.columns if col not in ['group', 'y_true', 'y_pred', 'y_prob']]
+    numeric_features = [f for f in feature_cols if pd.api.types.is_numeric_dtype(df[f])]
+
+    if numeric_features and len(groups) >= 2:
+        group_attribution_strength = {}
+        for group in groups:
+            group_mask = df['group'] == group
+            correlations = [
+                abs(df[group_mask][f].corr(df[group_mask]['y_pred']))
+                for f in numeric_features
+            ]
+            correlations = [c for c in correlations if not np.isnan(c)]
+            if correlations:
+                group_attribution_strength[group] = np.mean(correlations)
+
+        if len(group_attribution_strength) >= 2:
+            disparity = max(group_attribution_strength.values()) - min(group_attribution_strength.values())
+            metrics['model_explanation_parity'] = float(1 - disparity)
+        else:
+            metrics['model_explanation_parity'] = None
+    else:
+        metrics['model_explanation_parity'] = None
     
     return metrics
 
