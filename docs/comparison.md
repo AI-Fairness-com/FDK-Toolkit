@@ -11,7 +11,7 @@ This document positions the FDK Toolkit relative to existing open-source fairnes
 | **Coding required?** | No (no-code interface) | Yes (Python) | Yes (Python) | Minimal (config only) |
 | **Plain-language output** | Yes (dual reports) | No | No | Partial |
 | **Domain-specific bundles** | Yes (7 domains) | No (general) | No (general) | No (general) |
-| **Causal fairness** | Yes (via DoWhy integration) | No | No | No |
+| **Causal fairness** | Partial (correlation-based proxy metrics; not DoWhy-integrated) | No | No | No |
 | **Individual fairness** | Yes (consistency, counterfactual) | Limited | No | No |
 
 *Source: Compiled from Chapter 2.5, 2.6, 4.4, and Appendix D (p. 398)*
