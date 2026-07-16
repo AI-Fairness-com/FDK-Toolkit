@@ -1,0 +1,99 @@
+# FDK Toolkit: A Scientific Audit of Its 158 Fairness Metrics
+
+**Prepared as an independent technical/credibility review, prior to public release**
+
+---
+
+## 1. Executive Summary
+
+The FDK Toolkit's 7 domain pipelines (Business, Education, Finance, Governance, Health, Hiring, Justice) implement **158 distinct fairness metrics** — not the 89 previously stated in the book and website. This number was established by extracting every metric key directly from the 7 pipelines' source code (not from documentation, not from memory) and de-duplicating by exact name.
+
+Of these 158:
+
+| Category | Count | % |
+|---|---|---|
+| **Confirmed defensible** — direct citation to a validated open-source library (IBM AIF360, Microsoft Fairlearn, scikit-learn) or a peer-reviewed paper, OR a transparent, correctly-implemented combination/application of such validated components | **152** | 96.2% |
+| **Genuine implementation defects** — the formula does not measure what its name claims, independent of any citation question | **6** | 3.8% |
+
+**No metric was left in an "unexplained" state.** Every one of the 158 has either a specific external source, a specific formula-level justification for why it needs none, or a specific, named defect that requires a code fix before the toolkit can defend it.
+
+---
+
+## 2. Methodology
+
+This was a three-phase investigation:
+
+- **Phase A** — Re-derived the real metric set directly from all 7 pipeline `.py` files (not from the book, not from the WordPress site), cross-verified against independently-audited domain totals.
+- **Phase B** — For each of the 158 unique metrics, searched for a matching formula in IBM AIF360, Microsoft Fairlearn, scikit-learn documentation, or peer-reviewed literature. A match required the same *formula*, not just a similar name.
+- **Phase C** (this report) — For every metric that failed Phase B, the actual source code was read line-by-line to extract its exact mathematical formula, and that formula was tested against three questions:
+  1. Is it a literal combination of metrics already confirmed in Phase B?
+  2. Is it the same statistical *technique* as an already-confirmed metric, applied to a different (but still valid) base measure?
+  3. Does the formula actually measure what its name claims?
+
+Every citation in the accompanying spreadsheet links to the primary source — the actual library documentation page or the paper itself — for independent verification.
+
+---
+
+## 3. Why FDK Needed More Than a Library Wrapper
+
+IBM AIF360 and Microsoft Fairlearn are general-purpose classification-fairness toolkits. They were not built with a business, education, finance, governance, health, hiring, or justice *lens* — they provide the mathematical primitives (rate differences, ratios, calibration measures, individual-consistency measures, subgroup-discovery algorithms), not domain judgment about which comparisons matter in a specific regulated context.
+
+**112 of FDK's 158 metrics are these library primitives directly, or the same primitive relabeled for domain meaning** — e.g., Health's `overtreatment_disparity` is literally AIF360's `false_positive_rate_difference`; Finance's `regression_parity_difference` is the same max-min technique Fairlearn's own reductions module uses for regression fairness constraints.
+
+**40 metrics extend a validated technique into a genuine capability gap that neither AIF360 nor Fairlearn address at all**:
+
+- **Composite/weighted scores** (`composite_bias_score`, `composite_governance_fairness_index`, `unified_calibration_index`) — transparent, documented weighted sums of already-validated components. Verified directly in code: `composite_governance_fairness_index` is 40% built from three AIF360-confirmed metrics plus 30% sklearn's `accuracy_score`.
+- **Fairness monitoring over time or across resamples** (`temporal_drift_index`, `stability_metric`, `cross_validation_fairness_consistency`, `validation_holdout_robustness`, `validation_robustness_score`) — AIF360 and Fairlearn are both single-snapshot audit tools; neither has any temporal-drift or resampling-stability capability. FDK's versions apply k-fold cross-validation (Kohavi 1995), bootstrap resampling (Efron 1979), and genuine timestamp-sorted windowing to already-validated metrics — filling a real methodological gap, not inventing an arbitrary one.
+- **Data-quality precursor checks** (`representation_parity_index`, `data_coverage_gap`, `sample_distortion_*`) — standard, foundational statistics (sample balance, range coverage, mean absolute deviation) applied to a question AIF360/Fairlearn don't ask at all: is the training data itself representative before a fairness audit is even meaningful?
+- **A verified Gini coefficient** (`subgroup_error_concentration`) — a century-old, standard inequality statistic (Gini, 1912), correctly implemented, applied to per-group error concentration.
+- **A verified implementation of Corbett-Davies et al.'s "conditional statistical parity"** (`conditional_demographic_disparity`) — found only by reading the actual quantile-binning logic in the code, not by name-matching.
+
+This is the honest answer to "why does FDK have metrics no library provides": **because no general-purpose library was built to answer domain-specific, longitudinal, or data-quality questions that professional fairness auditing in a specific vertical requires** — and FDK's approach was to build these as transparent, formula-documented extensions of already-validated primitives, not as unexplained black boxes.
+
+---
+
+## 4. The 6 Genuine Defects — What Needs Fixing, Not Citing
+
+These are flagged separately because forcing a citation onto them would be dishonest — the problem is not that no one has validated this *kind* of metric, it's that **these specific formulas do not measure what their names claim.**
+
+| Metric | Domain | The actual problem |
+|---|---|---|
+| `temporal_fairness_consistency` | Business | The code's own comment admits it: *"Using data splitting as proxy for temporal analysis."* It randomly splits one snapshot dataset in half and treats the halves as "time periods." For i.i.d. data this will almost always show high stability — a false reassurance unrelated to real-world drift. |
+| `long_term_outcome_parity` | Business | Same fabricated-temporal mechanism as above. |
+| `dynamic_policy_fairness` | Business | Same fabricated-temporal mechanism as above. |
+| `educational_mobility_index` | Education | `advantage_rank = range(len(groups))` — assigns arbitrary sequential numbers based on iteration order, not any real measure of group privilege. The resulting correlation coefficient is mathematically well-defined but semantically meaningless. |
+| `model_explanation_parity` | Education | Literal hardcoded stub: `metrics['model_explanation_parity'] = 0.0  # Placeholder for speed`. Never computed at all. |
+| `missingness_bias_index` | Governance | Computes a global average missing-data rate, never conditioned on group. Cannot detect *differential* missingness — the only thing that would make this a bias metric rather than a generic data-quality statistic. |
+
+**All three Business "temporal" metrics share one additional problem worth fixing at the same time**: when data is insufficient, they don't report "insufficient data" — they silently return a hardcoded optimistic score (0.9–0.95). An auditing tool whose core promise is "you can trust this validated engine" must never fabricate a passing score when it lacks the data to compute a real one.
+
+**Recommended action, each is a small, well-scoped fix:**
+1. Wire the 3 Business temporal metrics to genuine timestamp data (Finance's and Health's implementations already show the correct pattern — real `if 'timestamp' in df.columns` sorting and windowing), or rename them honestly and remove the fabricated-time logic.
+2. Replace `educational_mobility_index`'s arbitrary rank with an actual, defensible advantage indicator, or remove the metric.
+3. Either implement `model_explanation_parity` for real or drop it from the published metric count.
+4. Make `missingness_bias_index` group-conditional (compare missingness rate *across* groups, consistent with every other "disparity" metric in the codebase), or rename it to "Overall Missingness Rate."
+
+None of these require new research — each is a contained code change, and **none of them are live in production yet**, which is exactly the opportunity you identified.
+
+---
+
+## 5. A Secondary Finding Worth Your Attention: Naming Accuracy
+
+Several of the 152 *confirmed* metrics use formulas that are fully defensible mathematically, but whose **names overclaim what they measure**. These don't need a citation fix — they need a naming fix:
+
+- `label_distribution_shift` and `prediction_distribution_shift` (Business) compute the **identical value** (Total Variation Distance between the label and prediction distributions) — one computation reported under two different names, neither of which describes a "shift" across groups or time.
+- `longitudinal_performance_drift` (Education) is a standard-deviation-of-standard-deviations statistic with no time dimension in the formula at all, despite its name.
+- `causal_pathway_disparity` (Education) computes a prediction-minus-truth gap — a correlational statistic — but is named as if it were a causal/Average-Treatment-Effect estimate, which would require actual causal inference methodology that isn't present.
+- `temporal_fairness_stability` and `fairness_drift_index` (Education) genuinely use validated statistical techniques (bootstrap resampling; real historical tracking), but their labels imply "temporal"/"drift" more strongly than the underlying math (which is closer to "resampling stability").
+
+None of these block a defensible-metrics claim — the math is sound — but a rigorous reviewer of the book would likely flag the naming, and fixing it now costs nothing.
+
+---
+
+## 6. Final Position for the Book and Website
+
+**Replace "89 Fairness Metrics" with "158 Fairness Metrics."**
+
+**Defensible framing**: *"FDK implements 158 fairness metrics across 7 domains. 152 are either drawn directly from IBM AIF360, Microsoft Fairlearn, and scikit-learn, or are transparent, documented extensions of those validated primitives into domain-specific, longitudinal, and data-quality questions those general-purpose libraries do not address. The remaining 6 have been identified through this audit as requiring a code fix before their current implementation can be defended, and are being corrected prior to any public claim about them."*
+
+This is a stronger, more credible claim than "158, all citable" would have been — it demonstrates the toolkit was rigorously audited, not just asserted, and that the few real issues found were caught and fixed *before* release rather than after a reviewer or journalist found them.
