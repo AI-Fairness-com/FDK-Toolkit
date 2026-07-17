@@ -43,6 +43,7 @@ Click "Run Audit" and receive two outputs:
 
 ## Documentation
 
+- [**Fairness Metrics Methodology & Citation Registry**](FDK_METHODOLOGY.md) – The complete scientific audit of all 158 fairness metrics: source, formula, and peer-reviewed citation for every one, plus the full record of defects found and fixed prior to launch. Companion data: [full citations spreadsheet](FDK_158_metrics_citations.csv).
 - [Methodology: Fairness Metrics Explained](docs/methodology.md) – Mathematical formulas and plain-language analogies
 - [Comparison with AIF360, Fairlearn, Aequitas](docs/comparison.md) – How FDK differs from existing toolkits
 - [Legal and Ethical Disclaimer](DISCLAIMER.md) – Important: FDK is not a legal compliance tool
