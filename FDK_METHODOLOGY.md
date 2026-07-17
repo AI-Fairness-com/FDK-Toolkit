@@ -40,7 +40,7 @@ For each of the 158 metrics, a citation search was conducted against:
 - **IBM AI Fairness 360 (AIF360)** — official API documentation
 - **Microsoft Fairlearn** — official API documentation
 - **scikit-learn** — official API documentation
-- **Peer-reviewed academic literature** — searched and verified per metric, not assumed from memory
+- **Peer-reviewed academic literature** — searched and verified per metric, rather than assumed or matched to internal documents.
 
 A match required the same underlying **formula**, not merely a similar name.
 
