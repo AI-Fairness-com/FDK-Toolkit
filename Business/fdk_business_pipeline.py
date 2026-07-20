@@ -111,7 +111,7 @@ def interpret_prompt(prompt: str) -> Dict[str, Any]:
         "recommended_metrics": BUSINESS_METRICS_CONFIG if business_match else []
     }
 
-def validate_dataframe_before_pipeline(df, required_cols=['group', 'y_true', 'y_pred']):
+def validate_dataframe_before_pipeline(df, required_cols=['group', 'y_true', 'y_pred'], enforce_min_group_size=True):
     """Enhanced pre-flight check - ORIGINAL FUNCTION"""
     # Basic validation
     missing_cols = [col for col in required_cols if col not in df.columns]
@@ -126,7 +126,18 @@ def validate_dataframe_before_pipeline(df, required_cols=['group', 'y_true', 'y_
     # Group diversity check
     if 'group' in df.columns and df['group'].nunique() < 2:
         raise ValueError("Need at least 2 unique groups for fairness analysis")
-    
+
+    # Minimum subgroup size check (consistent with other FDK domains)
+    # Skipped for internal calls (e.g. per-time-window recursion in temporal
+    # fairness analysis), where small slices are expected and legitimate.
+    if enforce_min_group_size and 'group' in df.columns:
+        smallest_group_size = df.groupby('group').size().min()
+        if smallest_group_size < 20:
+            raise ValueError(
+                f"Smallest subgroup has {smallest_group_size} samples (< 20). "
+                "Fairness metrics require at least 20 samples per group for statistical validity."
+            )
+
     return True
 
 def calculate_core_group_fairness(df: pd.DataFrame) -> Dict[str, Any]:
@@ -242,8 +253,10 @@ def calculate_performance_error_fairness(df: pd.DataFrame) -> Dict[str, Any]:
             recall_values.append(recall)
             accuracy_values.append(accuracy)
             
-            # Treatment Equality (FNR to FPR ratio)
+            # Treatment Equality (FNR to FPR ratio), clipped to avoid variance blow-up
+            # when a group's FPR is small relative to its FNR
             treatment_eq = fnr / (fpr + eps) if (fpr + fnr) > 0 else 1.0
+            treatment_eq = float(np.clip(treatment_eq, 0.0, 10.0))
             treatment_equalities.append(treatment_eq)
         
         # Difference metrics
@@ -583,7 +596,7 @@ def calculate_explainability_feature_influence(df: pd.DataFrame) -> Dict[str, An
         feature_influences = {}
         
         # If additional features exist beyond the required ones
-        feature_cols = [col for col in df.columns if col not in ['group', 'y_true', 'y_pred', 'y_prob']]
+        feature_cols = [col for col in df.columns if col not in ['group', 'y_true', 'y_pred', 'y_prob', 'timestamp']]
         
         if feature_cols:
             for group in groups:
@@ -734,7 +747,7 @@ def calculate_temporal_operational_fairness(df: pd.DataFrame) -> Dict[str, Any]:
                 (df_sorted['timestamp'] < time_windows[i + 1])
             ]
             if len(window_data) > 10:  # minimum samples per window
-                window_metrics = calculate_business_metrics(window_data)
+                window_metrics = calculate_business_metrics(window_data, enforce_min_group_size=False)
                 composite_scores.append(window_metrics.get('composite_bias_score', 0.0))
                 base_rates.append(window_data['y_true'].mean())
                 for group in group_selection_rates:
@@ -794,12 +807,12 @@ def assess_business_fairness(metrics: Dict[str, Any]) -> str:
     else:
         return "LOW_BIAS - Good customer equity standards"
 
-def calculate_business_metrics(df: pd.DataFrame) -> Dict[str, Any]:
+def calculate_business_metrics(df: pd.DataFrame, enforce_min_group_size: bool = True) -> Dict[str, Any]:
     """Calculate all business metrics - ORIGINAL FUNCTION"""
     metrics = {}
     
     # Run validation first
-    validate_dataframe_before_pipeline(df)
+    validate_dataframe_before_pipeline(df, enforce_min_group_size=enforce_min_group_size)
     
     # Define pipeline stages
     pipeline_stages = [
