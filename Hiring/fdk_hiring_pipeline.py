@@ -201,7 +201,8 @@ class HiringFairnessPipeline:
             if treatment_ratios:
                 valid_ratios = [v for v in treatment_ratios.values() if v != float('inf')]
                 if valid_ratios:
-                    metrics['treatment_equality'] = float(max(valid_ratios) - min(valid_ratios))
+                    clipped_ratios = [float(np.clip(v, 0.0, 10.0)) for v in valid_ratios]
+                    metrics['treatment_equality'] = float(max(clipped_ratios) - min(clipped_ratios))
         
         return metrics
 
@@ -392,13 +393,18 @@ class HiringFairnessPipeline:
             
             if len(numeric_cols) > 0:
                 for col in numeric_cols:
+                    col_std = df[col].std()
+                    if not col_std or col_std == 0:
+                        continue  # constant column, no meaningful gap to measure
                     group_means = []
                     for group in groups:
                         group_mask = df['group'] == group
                         group_means.append(float(df[group_mask][col].mean()))
                     
                     if len(group_means) >= 2:
-                        gap = float(max(group_means) - min(group_means))
+                        # Normalize by the feature's own spread so features on very
+                        # different scales don't dominate the averaged gap.
+                        gap = float((max(group_means) - min(group_means)) / col_std)
                         feature_gaps.append(gap)
                 
                 if feature_gaps:
@@ -527,6 +533,15 @@ class HiringFairnessPipeline:
         groups = df['group'].unique()
         if len(groups) < 2:
             raise ValueError("Need at least 2 groups for hiring fairness analysis")
+
+        # Minimum subgroup size check (consistent with other FDK domains)
+        group_counts = df['group'].value_counts()
+        small_groups = group_counts[group_counts < 20]
+        if len(small_groups) > 0:
+            raise ValueError(
+                f"Smallest subgroup(s) below 20 samples (< 20 required for statistical validity): "
+                f"{small_groups.to_dict()}"
+            )
 
         metrics.update(self.calculate_core_group_fairness(df))
         metrics.update(self.calculate_equality_opportunity_treatment(df))
