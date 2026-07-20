@@ -3,6 +3,7 @@
 # ================================================================
 # Interactive fairness audit for credit, lending, and financial AI systems
 # Compliant with ECOA, Fair Lending, and regulatory requirements
+# UPDATED: Unified Intelligent System Integration (Fixed to match justice standard)
 # ================================================================
 
 import os
@@ -12,7 +13,16 @@ import numpy as np
 from flask import Blueprint, request, render_template, session, redirect, url_for, send_from_directory
 from datetime import datetime
 
-from .fdk_finance_pipeline import run_pipeline
+# ================================================================
+# INTELLIGENT SELECTION IMPORT (UNIFIED SYSTEM)
+# ================================================================
+
+try:
+    from FDK import intelligent_target_selection
+    HAS_FDK_INTELLIGENT = True
+except ImportError:
+    HAS_FDK_INTELLIGENT = False
+    print(f"⚠️ FDK intelligent selection not available, using fallback detection")
 
 # ================================================================
 # Configuration
@@ -30,125 +40,147 @@ os.makedirs(REPORT_FOLDER, exist_ok=True)
 finance_bp = Blueprint('finance', __name__, template_folder='templates')
 
 # ================================================================
-# Finance-Specific Detection Functions
+# Pipeline Import
 # ================================================================
 
-def detect_finance_column_mappings(df, columns):
-    """
-    Universal auto-detection for finance datasets.
-    Handles both real financial data and synthetic/test datasets.
-    """
-    suggestions = {'group': None, 'y_true': None, 'y_pred': None, 'y_prob': None}
-    reasoning = {col: "" for col in columns}
-    
-    # Layer 1: Direct matching for standard column names
-    for col in columns:
-        col_lower = col.lower()
-        if col_lower in ['group', 'protected_group', 'demographic', 'category', 'segment', 'protected_attribute']:
-            suggestions['group'] = col
-            reasoning[col] = "Direct match: group/protected attribute column"
-            continue
-        elif col_lower in ['y_true', 'actual', 'true', 'outcome', 'target', 'label', 'ground_truth']:
-            suggestions['y_true'] = col
-            reasoning[col] = "Direct match: true outcomes/target variable"
-            continue
-        elif col_lower in ['y_pred', 'predicted', 'prediction', 'estimate', 'model_output']:
-            suggestions['y_pred'] = col
-            reasoning[col] = "Direct match: model predictions"
-            continue
-        elif col_lower in ['y_prob', 'probability', 'score', 'confidence', 'risk_score', 'propensity']:
-            suggestions['y_prob'] = col
-            reasoning[col] = "Direct match: probability/confidence scores"
-            continue
+from .fdk_finance_pipeline import run_pipeline
 
-    # Layer 2: Finance-specific keyword detection
+# ================================================================
+# UNIFIED FINANCE COLUMN DETECTION WITH INTELLIGENT SYSTEM
+# ================================================================
+
+def detect_finance_column_mappings(df, columns, test_type='pre_implementation', user_target=None):
+    """
+    Unified column detection with FDK intelligent system integration.
+    Priority: FDK Intelligent > User Override > Domain-specific detection
+    (Matches justice.py standard implementation)
+    
+    Args:
+        df: Pandas DataFrame containing financial data
+        columns: List of column names in the dataset
+        test_type: Type of test ('pre_implementation' or 'post_implementation')
+        user_target: User-specified target column (optional override)
+        
+    Returns:
+        tuple: (suggestions_dict, reasoning_dict, intelligent_suggestion) containing column mappings, explanations, and intelligent suggestion metadata
+    """
+    suggestions = {'group': None, 'y_true': None, 'y_pred': None, 'y_prob': None, 'timestamp': None}
+    reasoning = {}
+    intelligent_suggestion = None
+    
     for col in columns:
-        if col in [suggestions['group'], suggestions['y_true'], suggestions['y_pred'], suggestions['y_prob']]:
-            continue
-            
+        reasoning[col] = ""
+    
+    # STEP 1: FDK INTELLIGENT TARGET SELECTION (Matches justice standard)
+    if HAS_FDK_INTELLIGENT and test_type in ['pre_implementation', 'post_implementation']:
+        try:
+            intelligent_suggestion = intelligent_target_selection(df, test_type, 'finance')
+            if intelligent_suggestion and intelligent_suggestion in df.columns:
+                suggestions['y_true'] = intelligent_suggestion
+                reasoning[intelligent_suggestion] = f"✅ FDK INTELLIGENT SELECTION (test_type: {test_type})"
+                print(f"🎯 FDK Intelligent suggests: {intelligent_suggestion} for {test_type}")
+        except Exception as e:
+            print(f"⚠️ FDK intelligent selection failed: {e}")
+    
+    # STEP 2: USER OVERRIDE (TAKES PRIORITY) (Matches justice standard)
+    if user_target and user_target in df.columns:
+        suggestions['y_true'] = user_target
+        override_source = 'FDK' if intelligent_suggestion else 'auto-detection'
+        reasoning[user_target] = f"✅ USER MANUAL SELECTION (overrides {override_source})"
+        print(f"🎯 User overrides to: {user_target}")
+    
+    # STEP 3: FINANCE-SPECIFIC DETECTION (for group, y_pred, y_prob, and fallback)
+    finance_keywords = {
+        'group': ['income', 'credit_score', 'employment', 'location', 'region', 'age_group', 
+                'education', 'demographic', 'ethnicity', 'gender', 'race', 'geographic',
+                'experience', 'seniority', 'tenure', 'bracket', 'level', 'class',
+                'customer_group', 'applicant_group', 'protected_attribute', 'segment'],
+        'y_true': ['default', 'repayment', 'fraud', 'approval', 'denial', 'delinquency', 
+                  'outcome', 'result', 'status', 'chargeoff', 'bankruptcy', 'defaulted',
+                  'approved', 'denied', 'accepted', 'rejected', 'target', 'label',
+                  'ground_truth', 'actual', 'loan_status', 'credit_outcome'],
+        'y_pred': ['prediction', 'risk_score', 'algorithm', 'model', 'assessment', 'score',
+                  'decision', 'recommendation', 'classification', 'output', 'predicted',
+                  'model_score', 'algorithm_output', 'credit_prediction'],
+        'y_prob': ['probability', 'score', 'risk', 'likelihood', 'confidence', 'propensity',
+                  'estimate', 'calibration', 'confidence_score', 'risk_probability',
+                  'default_probability', 'propensity_score']
+    }
+    
+    for col in columns:
         col_data = df[col]
         unique_vals = col_data.unique()
         
-        # Group detection: Finance-specific demographic groups
-        if col_data.dtype == 'object' or (col_data.nunique() <= 20 and col_data.nunique() > 1):
-            finance_group_keywords = [
-                'income', 'credit_score', 'employment', 'location', 'region', 'age_group', 
-                'education', 'demographic', 'ethnicity', 'gender', 'race', 'geographic',
-                'experience', 'seniority', 'tenure', 'bracket', 'level', 'class'
-            ]
-            if any(keyword in col.lower() for keyword in finance_group_keywords):
-                suggestions['group'] = col
-                reasoning[col] = "Finance domain: Customer groups for fairness analysis"
-                continue
-                
-        # True outcomes: Finance binary outcomes
-        if col_data.dtype in ['int64', 'float64'] and len(unique_vals) <= 10:
-            if set(unique_vals).issubset({0, 1}) or (len(unique_vals) == 2 and min(unique_vals) in [0,1] and max(unique_vals) in [0,1]):
-                finance_true_keywords = [
-                    'default', 'repayment', 'fraud', 'approval', 'denial', 'delinquency', 
-                    'outcome', 'result', 'status', 'chargeoff', 'bankruptcy', 'defaulted',
-                    'approved', 'denied', 'accepted', 'rejected'
-                ]
-                if any(keyword in col.lower() for keyword in finance_true_keywords):
-                    suggestions['y_true'] = col
-                    reasoning[col] = "Finance domain: Financial outcomes (binary: 0/1)"
+        # GROUP COLUMN: Detect customer/demographic groups for financial fairness
+        if not suggestions['group']:
+            if col_data.dtype == 'object' or (col_data.nunique() <= 10 and col_data.nunique() > 1):
+                if any(keyword in col.lower() for keyword in finance_keywords['group']):
+                    suggestions['group'] = col
+                    reasoning[col] = "Customer/demographic groups for financial fairness analysis"
                     continue
                     
-        # Predictions: Finance algorithm outputs
-        if col_data.dtype in ['int64', 'float64'] and len(unique_vals) <= 10:
-            if (set(unique_vals).issubset({0, 1}) or (len(unique_vals) == 2 and min(unique_vals) in [0,1] and max(unique_vals) in [0,1])) and col != suggestions['y_true']:
-                finance_pred_keywords = [
-                    'prediction', 'risk_score', 'algorithm', 'model', 'assessment', 'score',
-                    'decision', 'recommendation', 'classification', 'output'
-                ]
-                if any(keyword in col.lower() for keyword in finance_pred_keywords):
-                    suggestions['y_pred'] = col
-                    reasoning[col] = "Finance domain: Financial algorithm predictions (binary: 0/1)"
+        # Y_TRUE COLUMN: Only if not already set by FDK or user
+        if not suggestions['y_true']:
+            if col_data.dtype in ['int64', 'float64'] and len(unique_vals) == 2:
+                if set(unique_vals).issubset({0, 1}):
+                    if any(keyword in col.lower() for keyword in finance_keywords['y_true']):
+                        suggestions['y_true'] = col
+                        reasoning[col] = "Financial outcomes (binary: 0/1)"
+                        continue
+                        
+        # Y_PRED COLUMN: Detect algorithm predictions (binary)
+        if not suggestions['y_pred']:
+            if col_data.dtype in ['int64', 'float64'] and len(unique_vals) == 2:
+                if set(unique_vals).issubset({0, 1}) and col != suggestions['y_true']:
+                    if any(keyword in col.lower() for keyword in finance_keywords['y_pred']):
+                        suggestions['y_pred'] = col
+                        reasoning[col] = "Financial algorithm predictions (binary: 0/1)"
+                        continue
+                        
+        # Y_PROB COLUMN: Detect probability scores (continuous 0-1)
+        if not suggestions['y_prob']:
+            if col_data.dtype in ['float64', 'float32']:
+                if len(unique_vals) > 2 and col_data.between(0, 1).all():
+                    if any(keyword in col.lower() for keyword in finance_keywords['y_prob']):
+                        suggestions['y_prob'] = col
+                        reasoning[col] = "Risk probability scores (0-1 range)"
+                        continue
+
+        # TIMESTAMP: optional column enabling temporal fairness metrics
+        if not suggestions['timestamp']:
+            if any(keyword in col.lower() for keyword in ['timestamp', 'date', 'decision_date', 'time', 'datetime']):
+                try:
+                    pd.to_datetime(df[col], errors='raise')
+                    suggestions['timestamp'] = col
+                    reasoning[col] = "Detected as a parseable date/time column for temporal fairness metrics"
                     continue
-                    
-        # Probability scores: Risk probabilities
-        if col_data.dtype in ['float64', 'float32']:
-            if len(unique_vals) > 2 and (col_data.between(0, 1).all() or (col_data.min() >= 0 and col_data.max() <= 1)):
-                prob_keywords = [
-                    'probability', 'score', 'risk', 'likelihood', 'confidence', 'propensity',
-                    'estimate', 'calibration', 'confidence_score'
-                ]
-                if any(keyword in col.lower() for keyword in prob_keywords):
-                    suggestions['y_prob'] = col
-                    reasoning[col] = "Finance domain: Risk probability scores (0-1 range)"
-                    continue
+                except Exception:
+                    pass
     
-    # Layer 3: Statistical fallbacks for unmapped columns
+    # STEP 4: FALLBACK DETECTION (Matches justice standard structure)
     if not suggestions['group']:
         for col in columns:
-            if df[col].dtype == 'object' and 2 <= df[col].nunique() <= 20:
+            if df[col].dtype == 'object' and df[col].nunique() <= 10:
                 suggestions['group'] = col
-                reasoning[col] = "Statistical fallback: Categorical groups (2-20 unique values)"
+                reasoning[col] = "Suggested customer groups (categorical)"
                 break
-        if not suggestions['group']:
-            for col in columns:
-                if df[col].dtype in ['int64', 'float64'] and 2 <= df[col].nunique() <= 10:
-                    suggestions['group'] = col
-                    reasoning[col] = "Statistical fallback: Numeric groups (2-10 unique values)"
-                    break
                 
     if not suggestions['y_true']:
         for col in columns:
             if df[col].dtype in ['int64', 'float64'] and df[col].nunique() == 2:
-                if col != suggestions['y_pred']:
-                    suggestions['y_true'] = col
-                    reasoning[col] = "Statistical fallback: Binary outcomes (2 unique values)"
-                    break
+                suggestions['y_true'] = col
+                reasoning[col] = "Suggested financial outcomes (binary)"
+                break
                 
     if not suggestions['y_pred']:
         for col in columns:
             if (col != suggestions['y_true'] and df[col].dtype in ['int64', 'float64'] 
                 and df[col].nunique() == 2):
                 suggestions['y_pred'] = col
-                reasoning[col] = "Statistical fallback: Binary predictions (2 unique values)"
+                reasoning[col] = "Suggested financial predictions (binary)"
                 break
     
-    return suggestions, reasoning
+    return suggestions, reasoning, intelligent_suggestion
 
 # ================================================================
 # Finance Summary Generation (Preserves Regulatory Logic)
@@ -351,7 +383,7 @@ def _build_regulatory_disclaimer() -> list:
     ]
 
 # ================================================================
-# Flask Routes
+# Flask Routes (Updated with Standard Parameter Reading)
 # ================================================================
 
 @finance_bp.route('/finance-upload')
@@ -362,7 +394,7 @@ def finance_upload_page():
 
 @finance_bp.route('/finance-audit', methods=['POST'])
 def start_finance_audit_process():
-    """Process finance dataset upload and auto-detect columns"""
+    """Process finance dataset upload with unified intelligent system"""
     if 'file' not in request.files:
         return render_template("result_finance.html", title="Error", 
                              message="No file uploaded.", summary=None)
@@ -371,6 +403,14 @@ def start_finance_audit_process():
     if file.filename == '':
         return render_template("result_finance.html", title="Error", 
                              message="Empty filename.", summary=None)
+
+    # ✅ STANDARD UNIFIED PARAMETER READING (Matches justice standard)
+    user_selected_target = request.form.get('target_column', '').strip()
+    if not user_selected_target:
+        user_selected_target = request.form.get('target_column_fallback', '').strip()
+    test_type = request.form.get('test_type', 'pre_implementation')
+    
+    print(f"🎯 UNIFIED INTELLIGENT SYSTEM: test_type={test_type}, user_target='{user_selected_target}'")
 
     # Save uploaded file
     dataset_path = os.path.join(UPLOAD_FOLDER, file.filename)
@@ -385,23 +425,27 @@ def start_finance_audit_process():
             return render_template("result_finance.html", title="Error", 
                                 message="Dataset too small. Need at least 3 columns.", summary=None)
         
-        # Auto-detect column mappings
-        suggested_mappings, column_reasoning = detect_finance_column_mappings(df, columns)
+        # ✅ STANDARD DETECTION with test_type and user_target (Matches justice standard)
+        suggested_mappings, column_reasoning, intelligent_suggestion = detect_finance_column_mappings(
+            df, columns, test_type, user_selected_target
+        )
         
-        # Validate required mappings
         required_mappings = ['group', 'y_true', 'y_pred']
-        missing_required = [m for m in required_mappings if not suggested_mappings.get(m)]
+        missing_required = [m for m in required_mappings if m not in suggested_mappings or not suggested_mappings[m]]
         
         if missing_required:
             return render_template("result_finance.html", title="Auto-Detection Failed",
                                 message=f"Could not automatically detect: {missing_required}.", summary=None)
         
-        # Store in session
+        # Store in session (Matches justice standard session keys)
         session.clear()
         session['dataset_path'] = dataset_path
         session['dataset_columns'] = columns
         session['column_mapping'] = suggested_mappings
         session['column_reasoning'] = column_reasoning
+        session['test_type'] = test_type
+        session['user_selected_target'] = user_selected_target
+        session['intelligent_suggestion'] = intelligent_suggestion
         
         # Count detected key features
         detected_key_features = len([m for m in suggested_mappings.values() if m is not None])
@@ -412,7 +456,10 @@ def start_finance_audit_process():
             column_reasoning=column_reasoning,
             total_columns=len(columns),
             detected_key_features=detected_key_features,
-            filename=file.filename
+            filename=file.filename,
+            test_type=test_type,
+            intelligent_suggestion=intelligent_suggestion,
+            user_selected=user_selected_target if user_selected_target else None
         )
         
     except Exception as e:
@@ -421,9 +468,12 @@ def start_finance_audit_process():
 
 @finance_bp.route('/finance-run-audit')
 def run_finance_audit_with_mapping():
-    """Execute finance fairness audit with detected mappings"""
+    """Execute finance fairness audit with unified metadata integration"""
     dataset_path = session.get('dataset_path')
     column_mapping = session.get('column_mapping', {})
+    test_type = session.get('test_type', 'pre_implementation')
+    user_selected_target = session.get('user_selected_target', '')
+    intelligent_suggestion = session.get('intelligent_suggestion', None)
     
     if not dataset_path or not column_mapping:
         return render_template("result_finance.html", title="Error", 
@@ -445,6 +495,16 @@ def run_finance_audit_with_mapping():
         for standard_name, original_name in column_mapping.items():
             if original_name and original_name in df.columns:
                 df_mapped[standard_name] = df[original_name].copy()
+
+        # Carry through any remaining original columns as additional features,
+        # excluding pure identifier columns (every value unique -- never a
+        # genuine fairness-relevant feature, and can dominate scale-sensitive
+        # calculations like feature attribution gaps).
+        mapped_originals = set(v for v in column_mapping.values() if v)
+        for col in df.columns:
+            if col not in mapped_originals and col not in df_mapped.columns:
+                if df[col].nunique() < len(df):
+                    df_mapped[col] = df[col].copy()
         
         # Convert data types to Python native
         for col in df_mapped.columns:
@@ -464,7 +524,38 @@ def run_finance_audit_with_mapping():
         # Run finance audit pipeline
         audit_response = run_pipeline(df_mapped, save_to_disk=False)
         
-        # Save detailed report
+        # ✅ STANDARD METADATA ADDITION (Matches justice standard exactly)
+        metadata = {
+            "target_column_used": column_mapping.get('y_true'),
+            "target_column_original": column_mapping.get('y_true'),
+            "prediction_column_used": column_mapping.get('y_pred'),
+            "group_column_used": column_mapping.get('group'),
+            "probability_column_used": column_mapping.get('y_prob'),
+            "test_type": test_type,
+            "intelligent_suggestion": intelligent_suggestion,
+            "user_override_applied": bool(user_selected_target and user_selected_target in df.columns),
+            "user_selected_target": user_selected_target if user_selected_target else None,
+            "timestamp": datetime.now().isoformat(),
+            "dataset_filename": os.path.basename(dataset_path),
+            "fdk_version": "finance_1.0_unified",
+            "column_mapping": column_mapping
+        }
+        audit_response["metadata"] = metadata
+        
+        # Add validation info with test_type (Matches justice standard)
+        if "validation" not in audit_response:
+            group_counts = df_mapped['group'].value_counts().to_dict()
+            audit_response["validation"] = {
+                "sample_size": len(df_mapped),
+                "groups_analyzed": len(df_mapped['group'].unique()),
+                "statistical_power": "strong" if len(df_mapped) >= 1000 else "adequate" if len(df_mapped) >= 500 else "moderate",
+                "group_counts": group_counts,
+                "test_type": test_type
+            }
+        else:
+            audit_response["validation"]["test_type"] = test_type
+        
+        # Save detailed report with metadata
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         report_filename = f"finance_audit_report_{timestamp}.json"
         report_path = os.path.join(REPORT_FOLDER, report_filename)
@@ -481,9 +572,11 @@ def run_finance_audit_with_mapping():
         return render_template(
             "result_finance.html",
             title="Finance Fairness Audit Completed",
-            message="Your finance dataset was audited successfully using 14 fairness metrics.",
+            message=f"Your finance dataset was audited successfully using 30 fairness metrics. Test Type: {test_type.replace('_', ' ').title()}",
             summary=summary_text,
-            report_filename=session['report_filename']
+            report_filename=session['report_filename'],
+            test_type=test_type,
+            metadata=metadata
         )
         
     except Exception as e:

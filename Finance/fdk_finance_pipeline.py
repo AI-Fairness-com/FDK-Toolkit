@@ -24,14 +24,14 @@ FINANCE_METRICS_CONFIG = {
         'predicted_negatives_per_group'
     ],
     'calibration_reliability': [
-        'calibration_gap',
-        'regression_parity',
+        'calibration_gap_difference',
+        'regression_parity_difference',
         'slice_auc_difference',
         'auc_confidence_interval_disparity'
     ],
     'error_prediction_fairness': [
         'fpr_difference', 'fnr_difference',
-        'treatment_equality',
+        'treatment_equality_difference',
         'fdr_difference', 'for_difference',
         'ppv_difference', 'npv_difference'
     ],
@@ -460,8 +460,8 @@ class FinanceFairnessPipeline:
             metrics['composite_bias_score'] = 0.0
         
         # 19. Temporal and Stability Metrics
-        metrics['temporal_drift_index'] = self.calculate_temporal_drift(all_metrics)
-        metrics['stability_metric'] = self.calculate_stability_metric(all_metrics)
+        metrics['temporal_drift_index'] = self.calculate_temporal_drift(df)
+        metrics['stability_metric'] = self.calculate_stability_metric(df)
         
         return metrics
 
@@ -530,7 +530,7 @@ class FinanceFairnessPipeline:
                     (df_sorted['timestamp'] < time_windows[i+1])
                 ]
                 if len(window_data) > 10:  # Minimum samples per window
-                    window_metrics = self.calculate_finance_metrics(window_data)
+                    window_metrics = self.calculate_finance_metrics(window_data, enforce_min_group_size=False)
                     fairness_scores.append(window_metrics.get('composite_bias_score', 0.0))
             
             if len(fairness_scores) > 1:
@@ -543,42 +543,43 @@ class FinanceFairnessPipeline:
         
         return 1.0
 
-    def calculate_temporal_drift(self, current_metrics: Dict[str, Any]) -> float:
-        """Calculate temporal drift in fairness metrics"""
-        if len(self.metrics_history) == 0:
-            return 0.0
-        
-        # Compare with historical metrics
-        recent_metrics = self.metrics_history[-1]
-        drift_score = 0.0
-        comparison_count = 0
-        
-        for key in current_metrics:
-            if key in recent_metrics and isinstance(current_metrics[key], (int, float)):
-                drift = abs(current_metrics[key] - recent_metrics[key])
-                drift_score += drift
-                comparison_count += 1
-        
-        return float(drift_score / comparison_count) if comparison_count > 0 else 0.0
+    def _temporal_windows(self, df: pd.DataFrame):
+        """Shared helper: per-week selection-rate spread across intra-file time windows."""
+        if 'timestamp' not in df.columns:
+            return []
+        try:
+            df = df.copy()
+            df['timestamp'] = pd.to_datetime(df['timestamp'])
+            df_sorted = df.sort_values('timestamp')
+            time_windows = pd.date_range(start=df_sorted['timestamp'].min(),
+                                          end=df_sorted['timestamp'].max(), freq='W')
+            spd_values = []
+            for i in range(len(time_windows) - 1):
+                window = df_sorted[(df_sorted['timestamp'] >= time_windows[i]) &
+                                    (df_sorted['timestamp'] < time_windows[i + 1])]
+                if len(window) > 10 and window['group'].nunique() >= 2:
+                    rates = window.groupby('group')['y_pred'].mean()
+                    spd_values.append(float(rates.max() - rates.min()))
+            return spd_values
+        except Exception:
+            return []
 
-    def calculate_stability_metric(self, current_metrics: Dict[str, Any]) -> float:
-        """Calculate stability of fairness metrics over time"""
-        if len(self.metrics_history) < 2:
-            return 1.0
-        
-        stability_scores = []
-        key_metrics = ['composite_bias_score', 'statistical_parity_difference', 'fpr_difference']
-        
-        for metric in key_metrics:
-            if metric in current_metrics:
-                historical_values = [hist[metric] for hist in self.metrics_history if metric in hist]
-                if len(historical_values) > 1:
-                    cv = np.std(historical_values) / np.mean(historical_values) if np.mean(historical_values) > 0 else 0
-                    stability_scores.append(max(0, 1 - cv))
-        
-        return float(np.mean(stability_scores)) if stability_scores else 1.0
+    def calculate_temporal_drift(self, df: pd.DataFrame) -> float:
+        """Calculate temporal drift using intra-file time windows (not cross-request history)."""
+        spd_values = self._temporal_windows(df)
+        if len(spd_values) > 1:
+            return float(np.mean(np.abs(np.diff(spd_values))))
+        return 0.0
 
-    def calculate_finance_metrics(self, df: pd.DataFrame) -> Dict[str, Any]:
+    def calculate_stability_metric(self, df: pd.DataFrame) -> float:
+        """Calculate stability of fairness metrics across intra-file time windows."""
+        spd_values = self._temporal_windows(df)
+        if len(spd_values) > 1:
+            cv = np.std(spd_values) / np.mean(spd_values) if np.mean(spd_values) > 0 else 0
+            return float(max(0, 1 - cv))
+        return 1.0
+
+    def calculate_finance_metrics(self, df: pd.DataFrame, enforce_min_group_size: bool = True) -> Dict[str, Any]:
         """Calculate all 30 finance fairness metrics"""
         metrics = {}
         
@@ -591,6 +592,17 @@ class FinanceFairnessPipeline:
         groups = df['group'].unique()
         if len(groups) < 2:
             raise ValueError("Need at least 2 groups for fairness analysis")
+
+        # Minimum subgroup size check (consistent with other FDK domains).
+        # Skipped for internal calls (e.g. per-time-window recursion inside
+        # calculate_temporal_fairness), where small slices are expected.
+        if enforce_min_group_size:
+            smallest_group_size = df.groupby('group').size().min()
+            if smallest_group_size < 20:
+                raise ValueError(
+                    f"Smallest subgroup has {smallest_group_size} samples (< 20). "
+                    "Fairness metrics require at least 20 samples per group for statistical validity."
+                )
         
         # Calculate all metric categories
         metrics.update(self.calculate_core_group_fairness(df))
