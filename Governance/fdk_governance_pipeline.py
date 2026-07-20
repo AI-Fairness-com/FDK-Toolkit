@@ -209,6 +209,16 @@ class GovernanceFairnessPipeline:
         # Check sample size
         if len(df) < 10:
             issues.append("Insufficient data samples (<10)")
+
+        # Check minimum subgroup size (consistent with other FDK domains)
+        if 'group' in df.columns:
+            group_counts = df['group'].value_counts()
+            small_groups = group_counts[group_counts < 20]
+            if len(small_groups) > 0:
+                issues.append(
+                    f"Smallest subgroup(s) below 20 samples (< 20 required for statistical validity): "
+                    f"{small_groups.to_dict()}"
+                )
         
         return len(issues) == 0, issues
 
@@ -244,9 +254,12 @@ class GovernanceFairnessPipeline:
                         fdr_values[group] = float(fp / (tp + fp)) if (tp + fp) > 0 else 0.0
                         for_values[group] = float(fn / (tn + fn)) if (tn + fn) > 0 else 0.0
                         
-                        # Treatment Equality (FNR/FPR Ratio)
+                        # Treatment Equality (FNR/FPR Ratio), clipped to avoid
+                        # blow-up when a group's FPR is small relative to its FNR
                         if fpr_values[group] > 0:
-                            treatment_ratios[group] = fnr_values[group] / fpr_values[group]
+                            treatment_ratios[group] = float(np.clip(
+                                fnr_values[group] / fpr_values[group], 0.0, 10.0
+                            ))
                         
                         error_rates[group] = float(1 - accuracy_score(y_true_vals, y_pred_vals))
                         accuracy_values[group] = float(accuracy_score(y_true_vals, y_pred_vals))

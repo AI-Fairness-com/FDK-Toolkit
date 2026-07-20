@@ -15,6 +15,22 @@ from datetime import datetime
 
 governance_bp = Blueprint('governance', __name__, template_folder='templates')
 
+# UNIFIED INTELLIGENT SYSTEM: FDK Import with fallback
+try:
+    from FDK import intelligent_target_selection
+    HAS_FDK_INTELLIGENT = True
+except ImportError:
+    HAS_FDK_INTELLIGENT = False
+    print(f"⚠️ FDK intelligent selection not available, using fallback detection")
+
+def _is_binary_column(series):
+    """True only if the column has exactly two unique values, both in {0, 1}."""
+    try:
+        unique_vals = series.dropna().unique()
+        return len(unique_vals) == 2 and set(unique_vals).issubset({0, 1})
+    except Exception:
+        return False
+
 # ================================================================
 # FOLDER CONFIGURATION
 # ================================================================
@@ -32,117 +48,169 @@ os.makedirs(REPORT_FOLDER, exist_ok=True)
 from .fdk_governance_pipeline import run_pipeline
 
 # ================================================================
-# UNIVERSAL GOVERNANCE AUTO-DETECTION SYSTEM
+# GOVERNANCE-SPECIFIC KEYWORD MAPPINGS (Phase 3A)
 # ================================================================
 
-def detect_governance_column_mappings(df, columns):
-    """Universal auto-detection for governance datasets"""
+GOVERNANCE_KEYWORDS = {
+    'group': ['constituency', 'district', 'demographic', 'ethnicity', 'gender', 
+              'socioeconomic', 'region', 'voter_segment', 'political_affiliation',
+              'age_group', 'income_bracket', 'geographic_zone', 'ward', 'precinct',
+              'category', 'segment', 'protected_attribute'],
+    'y_true': ['service_allocation', 'funding_distribution', 'policy_impact',
+               'resource_access', 'benefit_approval', 'program_eligibility',
+               'complaint_resolution', 'approval_status', 'actual', 'outcome',
+               'target', 'label', 'ground_truth'],
+    'y_pred': ['risk_score', 'eligibility_prediction', 'allocation_algorithm', 
+               'priority_ranking', 'service_classification', 'decision_model',
+               'prediction', 'predicted', 'estimate', 'model_output', 'forecast', 'model',
+               'decision', 'classification', 'output', 'recommended', 'recommendation'],
+    'y_prob': ['probability', 'score', 'confidence', 'likelihood', 'propensity',
+               'estimate', 'calibration', 'confidence_score', 'rating', 'risk_score']
+}
+
+# ================================================================
+# UNIFIED GOVERNANCE AUTO-DETECTION WITH FDK INTEGRATION
+# ================================================================
+
+def detect_governance_column_mappings(df, columns, test_type='pre_implementation', user_target=None):
+    """
+    Unified column detection with FDK intelligent system integration.
+    Priority: User Override > FDK Intelligent > Domain-specific detection
+    """
     suggestions = {'group': None, 'y_true': None, 'y_pred': None, 'y_prob': None}
     reasoning = {}
+    intelligent_suggestion = None
     
+    # Initialize reasoning for all columns
     for col in columns:
         reasoning[col] = ""
     
+    # PRIORITY 1: User Override (if provided)
+    if user_target and user_target in df.columns:
+        suggestions['y_true'] = user_target
+        reasoning[user_target] = "User override: Manually selected target column"
+        print(f"🎯 Using user override target: {user_target}")
+    
+    # PRIORITY 2: FDK Intelligent Selection (if available)
+    if HAS_FDK_INTELLIGENT and not suggestions['y_true']:
+        try:
+            intelligent_result = intelligent_target_selection(
+                df=df,
+                domain='governance',
+                test_type=test_type
+            )
+            
+            if intelligent_result and 'suggested_target' in intelligent_result:
+                suggested_target = intelligent_result['suggested_target']
+                if suggested_target in df.columns:
+                    suggestions['y_true'] = suggested_target
+                    reasoning[suggested_target] = f"FDK Intelligent: {intelligent_result.get('reasoning', 'AI-suggested target')}"
+                    intelligent_suggestion = suggested_target
+                    print(f"🤖 FDK intelligent suggestion: {suggested_target}")
+        except Exception as e:
+            print(f"⚠️ FDK intelligent selection failed: {e}")
+    
+    # PRIORITY 3: Domain-specific detection (with governance keywords)
     # Layer 1: Direct matching for standard column names
     for col in columns:
+        if col in [suggestions.get('group'), suggestions.get('y_true'), suggestions.get('y_pred'), suggestions.get('y_prob')]:
+            continue
+            
         col_lower = col.lower()
-        if col_lower in ['group', 'protected_group', 'demographic', 'category', 'segment', 'protected_attribute']:
-            suggestions['group'] = col
-            reasoning[col] = "Direct match: group/protected attribute column"
-            continue
-        elif col_lower in ['y_true', 'actual', 'true', 'outcome', 'target', 'label', 'ground_truth']:
-            suggestions['y_true'] = col
-            reasoning[col] = "Direct match: true outcomes/target variable"
-            continue
-        elif col_lower in ['y_pred', 'predicted', 'prediction', 'estimate', 'model_output']:
-            suggestions['y_pred'] = col
-            reasoning[col] = "Direct match: model predictions"
-            continue
-        elif col_lower in ['y_prob', 'probability', 'score', 'confidence', 'risk_score', 'propensity']:
-            suggestions['y_prob'] = col
-            reasoning[col] = "Direct match: probability/confidence scores"
-            continue
-
-    # Layer 2: Governance-specific keyword detection
+        
+        # GROUP detection
+        if not suggestions['group']:
+            if col_lower in ['group', 'protected_group', 'demographic', 'category', 'segment', 'protected_attribute']:
+                suggestions['group'] = col
+                reasoning[col] = "Direct match: group/protected attribute column"
+                continue
+            # Governance-specific group keywords
+            elif any(keyword in col_lower for keyword in GOVERNANCE_KEYWORDS['group']):
+                suggestions['group'] = col
+                reasoning[col] = "Governance domain: Constituent groups for fairness analysis"
+                continue
+        
+        # Y_TRUE detection (skip if already set by user or FDK)
+        if not suggestions['y_true']:
+            if col_lower in ['y_true', 'actual', 'true', 'outcome', 'target', 'label', 'ground_truth']:
+                if _is_binary_column(df[col]):
+                    suggestions['y_true'] = col
+                    reasoning[col] = "Direct match: true outcomes/target variable"
+                    continue
+            # Governance-specific outcome keywords
+            elif any(keyword in col_lower for keyword in GOVERNANCE_KEYWORDS['y_true']):
+                if _is_binary_column(df[col]):
+                    suggestions['y_true'] = col
+                    reasoning[col] = "Governance domain: Policy outcomes (binary: 0/1)"
+                    continue
+        
+        # Y_PRED detection
+        if not suggestions['y_pred']:
+            if col_lower in ['y_pred', 'predicted', 'prediction', 'estimate', 'model_output']:
+                if _is_binary_column(df[col]):
+                    suggestions['y_pred'] = col
+                    reasoning[col] = "Direct match: model predictions"
+                    continue
+            # Governance-specific prediction keywords
+            elif any(keyword in col_lower for keyword in GOVERNANCE_KEYWORDS['y_pred']):
+                if _is_binary_column(df[col]):
+                    suggestions['y_pred'] = col
+                    reasoning[col] = "Governance domain: Policy algorithm predictions"
+                    continue
+        
+        # Y_PROB detection
+        if not suggestions['y_prob']:
+            if col_lower in ['y_prob', 'probability', 'score', 'confidence', 'risk_score', 'propensity']:
+                suggestions['y_prob'] = col
+                reasoning[col] = "Direct match: probability/confidence scores"
+                continue
+            # Governance-specific probability keywords
+            elif any(keyword in col_lower for keyword in GOVERNANCE_KEYWORDS['y_prob']):
+                suggestions['y_prob'] = col
+                reasoning[col] = "Governance domain: Policy probability scores"
+                continue
+    
+    # Layer 2: Data type and statistical fallbacks
     for col in columns:
-        if col in [suggestions['group'], suggestions['y_true'], suggestions['y_pred'], suggestions['y_prob']]:
+        if col in [suggestions.get('group'), suggestions.get('y_true'), suggestions.get('y_pred'), suggestions.get('y_prob')]:
             continue
             
         col_data = df[col]
         unique_vals = col_data.unique()
         
-        # GROUP: Governance-specific groups
-        if col_data.dtype == 'object' or (col_data.nunique() <= 20 and col_data.nunique() > 1):
-            governance_group_keywords = ['constituency', 'district', 'demographic', 'ethnicity', 'gender', 
-                                       'socioeconomic', 'region', 'voter_segment', 'political_affiliation',
-                                       'age_group', 'income_bracket', 'geographic_zone']
-            if any(keyword in col.lower() for keyword in governance_group_keywords):
-                suggestions['group'] = col
-                reasoning[col] = "Governance domain: Constituent groups for fairness analysis"
-                continue
-                
-        # Y_TRUE: Governance outcomes
-        if col_data.dtype in ['int64', 'float64'] and len(unique_vals) <= 10:
-            if set(unique_vals).issubset({0, 1}) or (len(unique_vals) == 2 and min(unique_vals) in [0,1] and max(unique_vals) in [0,1]):
-                governance_true_keywords = ['service_allocation', 'funding_distribution', 'policy_impact',
-                                          'resource_access', 'benefit_approval', 'program_eligibility',
-                                          'complaint_resolution', 'approval_status']
-                if any(keyword in col.lower() for keyword in governance_true_keywords):
-                    suggestions['y_true'] = col
-                    reasoning[col] = "Governance domain: Policy outcomes (binary: 0/1)"
-                    continue
-                    
-        # Y_PRED: Governance predictions
-        if col_data.dtype in ['int64', 'float64'] and len(unique_vals) <= 10:
-            if (set(unique_vals).issubset({0, 1}) or (len(unique_vals) == 2 and min(unique_vals) in [0,1] and max(unique_vals) in [0,1])) and col != suggestions['y_true']:
-                governance_pred_keywords = ['risk_score', 'eligibility_prediction', 'allocation_algorithm', 
-                                          'priority_ranking', 'service_classification', 'decision_model']
-                if any(keyword in col.lower() for keyword in governance_pred_keywords):
-                    suggestions['y_pred'] = col
-                    reasoning[col] = "Governance domain: Policy algorithm predictions (binary: 0/1)"
-                    continue
-                    
-        # Y_PROB: Probability scores
-        if col_data.dtype in ['float64', 'float32']:
-            if len(unique_vals) > 2 and (col_data.between(0, 1).all() or (col_data.min() >= 0 and col_data.max() <= 1)):
-                prob_keywords = ['probability', 'score', 'confidence', 'likelihood', 'propensity',
-                               'estimate', 'calibration', 'confidence_score', 'rating']
-                if any(keyword in col.lower() for keyword in prob_keywords):
-                    suggestions['y_prob'] = col
-                    reasoning[col] = "Governance domain: Policy probability scores (0-1 range)"
-                    continue
-    
-    # Layer 3: Statistical fallbacks
-    if not suggestions['group']:
-        for col in columns:
-            if df[col].dtype == 'object' and 2 <= df[col].nunique() <= 20:
+        # GROUP fallback: Categorical columns
+        if not suggestions['group']:
+            if col_data.dtype == 'object' or (col_data.nunique() <= 20 and col_data.nunique() > 1):
                 suggestions['group'] = col
                 reasoning[col] = "Statistical fallback: Categorical groups (2-20 unique values)"
-                break
-        if not suggestions['group']:
-            for col in columns:
-                if df[col].dtype in ['int64', 'float64'] and 2 <= df[col].nunique() <= 10:
-                    suggestions['group'] = col
-                    reasoning[col] = "Statistical fallback: Numeric groups (2-10 unique values)"
-                    break
+                continue
                 
-    if not suggestions['y_true']:
-        for col in columns:
-            if df[col].dtype in ['int64', 'float64'] and df[col].nunique() == 2:
+        # Y_TRUE fallback: Binary columns
+        if not suggestions['y_true']:
+            if col_data.dtype in ['int64', 'float64'] and len(unique_vals) == 2:
                 if col != suggestions['y_pred']:
                     suggestions['y_true'] = col
                     reasoning[col] = "Statistical fallback: Binary outcomes (2 unique values)"
-                    break
-                
-    if not suggestions['y_pred']:
-        for col in columns:
-            if (col != suggestions['y_true'] and df[col].dtype in ['int64', 'float64'] 
-                and df[col].nunique() == 2):
+                    continue
+                    
+        # Y_PRED fallback: Binary columns (different from y_true)
+        if not suggestions['y_pred']:
+            if (col != suggestions['y_true'] and col_data.dtype in ['int64', 'float64'] 
+                and len(unique_vals) == 2):
                 suggestions['y_pred'] = col
                 reasoning[col] = "Statistical fallback: Binary predictions (2 unique values)"
-                break
+                continue
+                
+        # Y_PROB fallback: Probability range columns
+        if not suggestions['y_prob']:
+            if col_data.dtype in ['float64', 'float32']:
+                if len(unique_vals) > 2 and (col_data.between(0, 1).all() or (col_data.min() >= 0 and col_data.max() <= 1)):
+                    suggestions['y_prob'] = col
+                    reasoning[col] = "Statistical fallback: Probability scores (0-1 range)"
+                    continue
     
-    return suggestions, reasoning
+    # Final validation and return
+    return suggestions, reasoning, intelligent_suggestion
 
 # ================================================================
 # GOVERNANCE-SPECIFIC REPORT GENERATION WITH DATASET OVERVIEW
@@ -329,13 +397,21 @@ def governance_upload_page():
 
 @governance_bp.route('/governance-audit', methods=['POST'])
 def start_governance_audit_process():
-    """Process governance dataset upload"""
+    """Process governance dataset upload with unified parameter system"""
     if 'file' not in request.files:
         return render_template("result_governance.html", title="Error", message="No file uploaded.", summary=None)
 
     file = request.files['file']
     if file.filename == '':
         return render_template("result_governance.html", title="Error", message="Empty filename.", summary=None)
+
+    # UNIFIED PARAMETER READING (Phase 2A, Step 3)
+    user_selected_target = request.form.get('target_column', '').strip()
+    if not user_selected_target:
+        user_selected_target = request.form.get('target_column_fallback', '').strip()
+    test_type = request.form.get('test_type', 'pre_implementation')
+    
+    print(f"📋 Governance Audit Parameters: user_target={user_selected_target}, test_type={test_type}")
 
     dataset_path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(dataset_path)
@@ -348,7 +424,10 @@ def start_governance_audit_process():
             return render_template("result_governance.html", title="Error", 
                                 message="Dataset too small. Need at least 3 columns.", summary=None)
         
-        suggested_mappings, column_reasoning = detect_governance_column_mappings(df, columns)
+        # UNIFIED GOVERNANCE AUTO-DETECTION with FDK integration
+        suggested_mappings, column_reasoning, intelligent_suggestion = detect_governance_column_mappings(
+            df, columns, test_type=test_type, user_target=user_selected_target
+        )
         
         required_mappings = ['group', 'y_true', 'y_pred']
         missing_required = [m for m in required_mappings if m not in suggested_mappings or not suggested_mappings[m]]
@@ -362,6 +441,9 @@ def start_governance_audit_process():
         session['dataset_columns'] = columns
         session['column_mapping'] = suggested_mappings
         session['column_reasoning'] = column_reasoning
+        session['test_type'] = test_type
+        session['user_selected_target'] = user_selected_target
+        session['intelligent_suggestion'] = intelligent_suggestion
         
         detected_key_features = len([m for m in suggested_mappings.values() if m is not None])
         
@@ -371,7 +453,9 @@ def start_governance_audit_process():
             column_reasoning=column_reasoning,
             total_columns=len(columns),
             detected_key_features=detected_key_features,
-            filename=file.filename
+            filename=file.filename,
+            test_type=test_type,
+            intelligent_suggestion=intelligent_suggestion
         )
         
     except Exception as e:
@@ -402,6 +486,16 @@ def run_governance_audit_with_mapping():
         for standard_name, original_name in column_mapping.items():
             if original_name and original_name in df.columns:
                 df_mapped[standard_name] = df[original_name].copy()
+
+        # Carry through any remaining original columns as additional features,
+        # excluding pure identifier columns (every value unique -- never a
+        # genuine fairness-relevant feature, and can dominate scale-sensitive
+        # calculations like feature attribution gaps).
+        mapped_originals = set(v for v in column_mapping.values() if v)
+        for col in df.columns:
+            if col not in mapped_originals and col not in df_mapped.columns:
+                if df[col].nunique() < len(df) and pd.api.types.is_numeric_dtype(df[col]):
+                    df_mapped[col] = df[col].copy()
         
         for col in df_mapped.columns:
             if df_mapped[col].dtype == 'bool':
@@ -422,6 +516,24 @@ def run_governance_audit_with_mapping():
                                     message=f"Column '{col}' is not a Series. This should never happen.", summary=None)
         
         audit_response = run_pipeline(df_mapped, save_to_disk=False)
+        
+        # UNIFIED METADATA ADDITION (Phase 2A, Step 4)
+        metadata = {
+            "target_column_used": column_mapping.get('y_true'),
+            "target_column_original": column_mapping.get('y_true'),
+            "prediction_column_used": column_mapping.get('y_pred'),
+            "group_column_used": column_mapping.get('group'),
+            "probability_column_used": column_mapping.get('y_prob'),
+            "test_type": session.get('test_type', 'pre_implementation'),
+            "intelligent_suggestion": session.get('intelligent_suggestion'),
+            "user_override_applied": bool(session.get('user_selected_target') and session.get('user_selected_target') in df.columns),
+            "user_selected_target": session.get('user_selected_target') if session.get('user_selected_target') else None,
+            "timestamp": datetime.now().isoformat(),
+            "dataset_filename": os.path.basename(dataset_path),
+            "fdk_version": "governance_1.0_unified",
+            "column_mapping": column_mapping
+        }
+        audit_response["metadata"] = metadata
         
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         report_filename = f"governance_audit_report_{timestamp}.json"
