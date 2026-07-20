@@ -12,6 +12,22 @@ from datetime import datetime, timedelta
 # CHANGE: Flask app → Blueprint
 education_bp = Blueprint('education', __name__, template_folder='templates')
 
+# UNIFIED INTELLIGENT SYSTEM: FDK Import with fallback
+try:
+    from FDK import intelligent_target_selection
+    HAS_FDK_INTELLIGENT = True
+except ImportError:
+    HAS_FDK_INTELLIGENT = False
+    print(f"⚠️ FDK intelligent selection not available, using fallback detection")
+
+def _is_binary_column(series):
+    """True only if the column has exactly two unique values, both in {0, 1}."""
+    try:
+        unique_vals = series.dropna().unique()
+        return len(unique_vals) == 2 and set(unique_vals).issubset({0, 1})
+    except Exception:
+        return False
+
 # FIX: Import pipeline with relative import
 from .fdk_education_pipeline import run_pipeline
 
@@ -26,117 +42,170 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(REPORT_FOLDER, exist_ok=True)
 
 # ------------------------------------------------
-# Education Auto-Detection
+# Education-Specific Keyword Mappings (Phase 3A)
 # ------------------------------------------------
-def detect_education_column_mappings(df, columns):
-    """Auto-detection for education datasets"""
-    suggestions = {'group': None, 'y_true': None, 'y_pred': None, 'y_prob': None}
+EDUCATION_KEYWORDS = {
+    'group': ['student_id', 'school', 'district', 'demographic', 'cohort', 'program',
+              'track', 'background', 'ethnicity', 'gender', 'socioeconomic', 
+              'disability', 'ELL', 'special_ed', 'category', 'segment', 'protected_attribute'],
+    'y_true': ['graduation', 'dropout', 'admission', 'performance', 'success', 
+               'passed', 'achieved', 'qualified', 'retained', 'promoted', 'completed',
+               'advanced', 'remediated', 'certified', 'placed', 'actual', 'outcome',
+               'target', 'label', 'ground_truth'],
+    'y_pred': ['predicted_grade', 'risk_level', 'model_score', 'prediction', 'predicted', 'score',
+               'assessment', 'algorithm', 'recommendation', 'recommended', 'placement_score', 
+               'admission_prob', 'model', 'decision', 'classification', 'output',
+               'estimate', 'model_output'],
+    'y_prob': ['probability', 'confidence', 'score', 'likelihood', 'propensity',
+               'estimate', 'calibration', 'confidence_score', 'rating', 'risk']
+}
+
+# ------------------------------------------------
+# Unified Education Auto-Detection with FDK Integration
+# ------------------------------------------------
+def detect_education_column_mappings(df, columns, test_type='pre_implementation', user_target=None):
+    """
+    Unified column detection with FDK intelligent system integration.
+    Priority: FDK Intelligent > User Override > Domain-specific detection
+    """
+    suggestions = {'group': None, 'y_true': None, 'y_pred': None, 'y_prob': None, 'timestamp': None}
     reasoning = {}
+    intelligent_suggestion = None
     
+    # Initialize reasoning for all columns
     for col in columns:
         reasoning[col] = ""
     
+    # STEP 1: FDK INTELLIGENT TARGET SELECTION
+    if HAS_FDK_INTELLIGENT and test_type in ['pre_implementation', 'post_implementation']:
+        try:
+            intelligent_suggestion = intelligent_target_selection(df, test_type, 'education')
+            if intelligent_suggestion and intelligent_suggestion in df.columns:
+                suggestions['y_true'] = intelligent_suggestion
+                reasoning[intelligent_suggestion] = f"✅ FDK INTELLIGENT SELECTION (test_type: {test_type})"
+                print(f"🎯 FDK Intelligent suggests: {intelligent_suggestion} for {test_type}")
+        except Exception as e:
+            print(f"⚠️ FDK intelligent selection failed: {e}")
+    
+    # STEP 2: USER OVERRIDE (TAKES PRIORITY)
+    if user_target and user_target in df.columns:
+        suggestions['y_true'] = user_target
+        override_source = 'FDK' if intelligent_suggestion else 'auto-detection'
+        reasoning[user_target] = f"✅ USER MANUAL SELECTION (overrides {override_source})"
+        print(f"🎯 User overrides to: {user_target}")
+    
+    # STEP 3: Domain-specific detection (with education keywords)
     # Layer 1: Direct matching for standard column names
     for col in columns:
+        if col in [suggestions.get('group'), suggestions.get('y_true'), suggestions.get('y_pred'), suggestions.get('y_prob')]:
+            continue
+            
         col_lower = col.lower()
-        if col_lower in ['group', 'protected_group', 'demographic', 'category', 'segment', 'protected_attribute']:
-            suggestions['group'] = col
-            reasoning[col] = "Direct match: group/protected attribute column"
-            continue
-        elif col_lower in ['y_true', 'actual', 'true', 'outcome', 'target', 'label', 'ground_truth']:
-            suggestions['y_true'] = col
-            reasoning[col] = "Direct match: true outcomes/target variable"
-            continue
-        elif col_lower in ['y_pred', 'predicted', 'prediction', 'estimate', 'model_output']:
-            suggestions['y_pred'] = col
-            reasoning[col] = "Direct match: model predictions"
-            continue
-        elif col_lower in ['y_prob', 'probability', 'score', 'confidence', 'risk_score', 'propensity']:
-            suggestions['y_prob'] = col
-            reasoning[col] = "Direct match: probability/confidence scores"
-            continue
+        
+        # GROUP detection
+        if not suggestions['group']:
+            if col_lower in ['group', 'protected_group', 'demographic', 'category', 'segment', 'protected_attribute']:
+                suggestions['group'] = col
+                reasoning[col] = "Direct match: group/protected attribute column"
+                continue
+            # Education-specific group keywords
+            elif any(keyword in col_lower for keyword in EDUCATION_KEYWORDS['group']):
+                suggestions['group'] = col
+                reasoning[col] = "Education domain: Student groups for fairness analysis"
+                continue
+        
+        # Y_TRUE detection (skip if already set by user or FDK)
+        if not suggestions['y_true']:
+            if col_lower in ['y_true', 'actual', 'true', 'outcome', 'target', 'label', 'ground_truth']:
+                if _is_binary_column(df[col]):
+                    suggestions['y_true'] = col
+                    reasoning[col] = "Direct match: true outcomes/target variable"
+                    continue
+            # Education-specific outcome keywords
+            elif any(keyword in col_lower for keyword in EDUCATION_KEYWORDS['y_true']):
+                if _is_binary_column(df[col]):
+                    suggestions['y_true'] = col
+                    reasoning[col] = "Education domain: Educational outcomes (binary: 0/1)"
+                    continue
+        
+        # Y_PRED detection
+        if not suggestions['y_pred']:
+            if col_lower in ['y_pred', 'predicted', 'prediction', 'estimate', 'model_output']:
+                if _is_binary_column(df[col]):
+                    suggestions['y_pred'] = col
+                    reasoning[col] = "Direct match: model predictions"
+                    continue
+            # Education-specific prediction keywords
+            elif any(keyword in col_lower for keyword in EDUCATION_KEYWORDS['y_pred']):
+                if _is_binary_column(df[col]):
+                    suggestions['y_pred'] = col
+                    reasoning[col] = "Education domain: Educational algorithm predictions"
+                    continue
+        
+        # Y_PROB detection
+        if not suggestions['y_prob']:
+            if col_lower in ['y_prob', 'probability', 'score', 'confidence', 'risk_score', 'propensity']:
+                suggestions['y_prob'] = col
+                reasoning[col] = "Direct match: probability/confidence scores"
+                continue
+            # Education-specific probability keywords
+            elif any(keyword in col_lower for keyword in EDUCATION_KEYWORDS['y_prob']):
+                suggestions['y_prob'] = col
+                reasoning[col] = "Education domain: Educational probability scores"
+                continue
 
-    # Layer 2: Education-specific keyword detection
+        # TIMESTAMP: optional column enabling temporal fairness metrics
+        if not suggestions.get('timestamp'):
+            if any(keyword in col_lower for keyword in ['timestamp', 'date', 'decision_date', 'time', 'datetime']):
+                try:
+                    pd.to_datetime(df[col], errors='raise')
+                    suggestions['timestamp'] = col
+                    reasoning[col] = "Detected as a parseable date/time column for temporal fairness metrics"
+                    continue
+                except Exception:
+                    pass
+    
+    # Layer 2: Data type and statistical fallbacks
     for col in columns:
-        if col in [suggestions['group'], suggestions['y_true'], suggestions['y_pred'], suggestions['y_prob']]:
+        if col in [suggestions.get('group'), suggestions.get('y_true'), suggestions.get('y_pred'), suggestions.get('y_prob')]:
             continue
             
         col_data = df[col]
         unique_vals = col_data.unique()
         
-        # GROUP: Education-specific groups
-        if col_data.dtype == 'object' or (col_data.nunique() <= 20 and col_data.nunique() > 1):
-            education_group_keywords = ['school', 'district', 'demographic', 'ethnicity', 'gender', 
-                                      'socioeconomic', 'disability', 'ELL', 'special_ed', 'cohort',
-                                      'background', 'category', 'segment', 'program', 'track']
-            if any(keyword in col.lower() for keyword in education_group_keywords):
-                suggestions['group'] = col
-                reasoning[col] = "Education domain: Student groups for fairness analysis"
-                continue
-                
-        # Y_TRUE: Education outcomes
-        if col_data.dtype in ['int64', 'float64'] and len(unique_vals) <= 10:
-            if set(unique_vals).issubset({0, 1}) or (len(unique_vals) == 2 and min(unique_vals) in [0,1] and max(unique_vals) in [0,1]):
-                education_true_keywords = ['admitted', 'placed', 'graduated', 'retained', 'promoted',
-                                         'completed', 'advanced', 'remediated', 'certified',
-                                         'success', 'passed', 'achieved', 'qualified']
-                if any(keyword in col.lower() for keyword in education_true_keywords):
-                    suggestions['y_true'] = col
-                    reasoning[col] = "Education domain: Educational outcomes (binary: 0/1)"
-                    continue
-                    
-        # Y_PRED: Education predictions
-        if col_data.dtype in ['int64', 'float64'] and len(unique_vals) <= 10:
-            if (set(unique_vals).issubset({0, 1}) or (len(unique_vals) == 2 and min(unique_vals) in [0,1] and max(unique_vals) in [0,1])) and col != suggestions['y_true']:
-                education_pred_keywords = ['prediction', 'score', 'assessment', 'algorithm', 
-                                         'recommendation', 'placement_score', 'admission_prob',
-                                         'model', 'decision', 'classification', 'output']
-                if any(keyword in col.lower() for keyword in education_pred_keywords):
-                    suggestions['y_pred'] = col
-                    reasoning[col] = "Education domain: Educational algorithm predictions (binary: 0/1)"
-                    continue
-                    
-        # Y_PROB: Probability scores
-        if col_data.dtype in ['float64', 'float32']:
-            if len(unique_vals) > 2 and (col_data.between(0, 1).all() or (col_data.min() >= 0 and col_data.max() <= 1)):
-                prob_keywords = ['probability', 'score', 'confidence', 'likelihood', 'propensity',
-                               'estimate', 'calibration', 'confidence_score', 'rating']
-                if any(keyword in col.lower() for keyword in prob_keywords):
-                    suggestions['y_prob'] = col
-                    reasoning[col] = "Education domain: Educational probability scores (0-1 range)"
-                    continue
-    
-    # Layer 3: Statistical fallbacks
-    if not suggestions['group']:
-        for col in columns:
-            if df[col].dtype == 'object' and 2 <= df[col].nunique() <= 20:
+        # GROUP fallback: Categorical columns
+        if not suggestions['group']:
+            if col_data.dtype == 'object' or (col_data.nunique() <= 20 and col_data.nunique() > 1):
                 suggestions['group'] = col
                 reasoning[col] = "Statistical fallback: Categorical groups (2-20 unique values)"
-                break
-        if not suggestions['group']:
-            for col in columns:
-                if df[col].dtype in ['int64', 'float64'] and 2 <= df[col].nunique() <= 10:
-                    suggestions['group'] = col
-                    reasoning[col] = "Statistical fallback: Numeric groups (2-10 unique values)"
-                    break
+                continue
                 
-    if not suggestions['y_true']:
-        for col in columns:
-            if df[col].dtype in ['int64', 'float64'] and df[col].nunique() == 2:
+        # Y_TRUE fallback: Binary columns
+        if not suggestions['y_true']:
+            if col_data.dtype in ['int64', 'float64'] and len(unique_vals) == 2:
                 if col != suggestions['y_pred']:
                     suggestions['y_true'] = col
                     reasoning[col] = "Statistical fallback: Binary outcomes (2 unique values)"
-                    break
-                
-    if not suggestions['y_pred']:
-        for col in columns:
-            if (col != suggestions['y_true'] and df[col].dtype in ['int64', 'float64'] 
-                and df[col].nunique() == 2):
+                    continue
+                    
+        # Y_PRED fallback: Binary columns (different from y_true)
+        if not suggestions['y_pred']:
+            if (col != suggestions['y_true'] and col_data.dtype in ['int64', 'float64'] 
+                and len(unique_vals) == 2):
                 suggestions['y_pred'] = col
                 reasoning[col] = "Statistical fallback: Binary predictions (2 unique values)"
-                break
+                continue
+                
+        # Y_PROB fallback: Probability range columns
+        if not suggestions['y_prob']:
+            if col_data.dtype in ['float64', 'float32']:
+                if len(unique_vals) > 2 and (col_data.between(0, 1).all() or (col_data.min() >= 0 and col_data.max() <= 1)):
+                    suggestions['y_prob'] = col
+                    reasoning[col] = "Statistical fallback: Probability scores (0-1 range)"
+                    continue
     
-    return suggestions, reasoning
+    # Final validation and return
+    return suggestions, reasoning, intelligent_suggestion
 
 # ------------------------------------------------
 # Education-Specific Human Summary
@@ -316,13 +385,21 @@ def education_upload_page():
 
 @education_bp.route('/education-audit', methods=['POST'])
 def start_education_audit_process():
-    """Process education dataset upload"""
+    """Process education dataset upload with unified parameter system"""
     if 'file' not in request.files:
         return render_template("result_education.html", title="Error", message="No file uploaded.", summary=None)
 
     file = request.files['file']
     if file.filename == '':
         return render_template("result_education.html", title="Error", message="Empty filename.", summary=None)
+
+    # UNIFIED PARAMETER READING (Phase 2A, Step 3)
+    user_selected_target = request.form.get('target_column', '').strip()
+    if not user_selected_target:
+        user_selected_target = request.form.get('target_column_fallback', '').strip()
+    test_type = request.form.get('test_type', 'pre_implementation')
+    
+    print(f"📋 Education Audit Parameters: user_target={user_selected_target}, test_type={test_type}")
 
     # Save uploaded file
     dataset_path = os.path.join(UPLOAD_FOLDER, file.filename)
@@ -336,8 +413,10 @@ def start_education_audit_process():
             return render_template("result_education.html", title="Error", 
                                 message="Dataset too small. Need at least 3 columns.", summary=None)
         
-        # Education auto-detection
-        suggested_mappings, column_reasoning = detect_education_column_mappings(df, columns)
+        # UNIFIED EDUCATION AUTO-DETECTION with FDK integration
+        suggested_mappings, column_reasoning, intelligent_suggestion = detect_education_column_mappings(
+            df, columns, test_type=test_type, user_target=user_selected_target
+        )
         
         required_mappings = ['group', 'y_true', 'y_pred']
         missing_required = [m for m in required_mappings if m not in suggested_mappings or not suggested_mappings[m]]
@@ -346,12 +425,15 @@ def start_education_audit_process():
             return render_template("result_education.html", title="Auto-Detection Failed",
                                 message=f"Could not automatically detect: {missing_required}. Please ensure your dataset has clear column names.", summary=None)
         
-        # Store in session
+        # Store in session with additional metadata
         session.clear()
         session['dataset_path'] = dataset_path
         session['dataset_columns'] = columns
         session['column_mapping'] = suggested_mappings
         session['column_reasoning'] = column_reasoning
+        session['test_type'] = test_type
+        session['user_selected_target'] = user_selected_target
+        session['intelligent_suggestion'] = intelligent_suggestion
         
         # Count actual key features detected
         detected_key_features = len([m for m in suggested_mappings.values() if m is not None])
@@ -362,7 +444,9 @@ def start_education_audit_process():
             column_reasoning=column_reasoning,
             total_columns=len(columns),
             detected_key_features=detected_key_features,
-            filename=file.filename
+            filename=file.filename,
+            test_type=test_type,
+            intelligent_suggestion=intelligent_suggestion
         )
         
     except Exception as e:
@@ -394,6 +478,16 @@ def run_education_audit_with_mapping():
         for standard_name, original_name in column_mapping.items():
             if original_name and original_name in df.columns:
                 df_mapped[standard_name] = df[original_name].copy()
+
+        # Carry through any remaining original columns as additional features,
+        # excluding pure identifier columns (every value unique -- never a
+        # genuine fairness-relevant feature, and can dominate scale-sensitive
+        # calculations like feature attribution gaps).
+        mapped_originals = set(v for v in column_mapping.values() if v)
+        for col in df.columns:
+            if col not in mapped_originals and col not in df_mapped.columns:
+                if df[col].nunique() < len(df):
+                    df_mapped[col] = df[col].copy()
         
         # Convert data types to Python native
         for col in df_mapped.columns:
@@ -419,7 +513,25 @@ def run_education_audit_with_mapping():
         # Run education audit
         audit_response = run_pipeline(df_mapped, save_to_disk=False)
         
-        # Save report
+        # UNIFIED METADATA ADDITION (Phase 2A, Step 4)
+        metadata = {
+            "target_column_used": column_mapping.get('y_true'),
+            "target_column_original": column_mapping.get('y_true'),
+            "prediction_column_used": column_mapping.get('y_pred'),
+            "group_column_used": column_mapping.get('group'),
+            "probability_column_used": column_mapping.get('y_prob'),
+            "test_type": session.get('test_type', 'pre_implementation'),
+            "intelligent_suggestion": session.get('intelligent_suggestion'),
+            "user_override_applied": bool(session.get('user_selected_target') and session.get('user_selected_target') in df.columns),
+            "user_selected_target": session.get('user_selected_target') if session.get('user_selected_target') else None,
+            "timestamp": datetime.now().isoformat(),
+            "dataset_filename": os.path.basename(dataset_path),
+            "fdk_version": "education_1.0_unified",
+            "column_mapping": column_mapping
+        }
+        audit_response["metadata"] = metadata
+        
+        # Save report with metadata
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         report_filename = f"education_audit_report_{timestamp}.json"
         report_path = os.path.join(REPORT_FOLDER, report_filename)

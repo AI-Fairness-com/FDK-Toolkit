@@ -507,33 +507,37 @@ def calculate_individual_fairness_metrics(df: pd.DataFrame) -> Dict[str, Any]:
 # ================================================================
 
 def calculate_temporal_stability_metrics(df: pd.DataFrame, historical_metrics: List[Dict] = None) -> Dict[str, Any]:
-    """Calculate 1 temporal stability metric"""
+    """Calculate 1 temporal stability metric using intra-file time windows
+    (historical_metrics is no longer used -- a fresh pipeline instance per
+    request means cross-request history is never actually available)."""
     metrics = {}
-    
-    if historical_metrics and len(historical_metrics) > 1:
-        # Calculate drift in key fairness metrics over time
-        key_metrics = ['statistical_parity_difference', 'equal_opportunity_difference']
-        drift_scores = []
-        
-        for metric in key_metrics:
-            historical_values = []
-            for hist in historical_metrics[-5:]:  # Last 5 periods
-                if metric in hist:
-                    historical_values.append(hist[metric])
-            
-            if len(historical_values) > 1:
-                drift = np.std(historical_values) / np.mean(historical_values) if np.mean(historical_values) > 0 else 0
-                drift_scores.append(drift)
-        
-        if drift_scores:
-            metrics['fairness_drift_index'] = float(1 - min(1.0, np.mean(drift_scores)))
-        else:
+
+    if 'timestamp' in df.columns:
+        try:
+            df_ts = df.copy()
+            df_ts['timestamp'] = pd.to_datetime(df_ts['timestamp'])
+            df_sorted = df_ts.sort_values('timestamp')
+            time_windows = pd.date_range(start=df_sorted['timestamp'].min(),
+                                          end=df_sorted['timestamp'].max(), freq='W')
+            spd_values = []
+            for i in range(len(time_windows) - 1):
+                window = df_sorted[(df_sorted['timestamp'] >= time_windows[i]) &
+                                    (df_sorted['timestamp'] < time_windows[i + 1])]
+                if len(window) > 10 and window['group'].nunique() >= 2:
+                    rates = window.groupby('group')['y_pred'].mean()
+                    spd_values.append(float(rates.max() - rates.min()))
+
+            if len(spd_values) > 1:
+                drift = np.std(spd_values) / np.mean(spd_values) if np.mean(spd_values) > 0 else 0
+                metrics['fairness_drift_index'] = float(1 - min(1.0, drift))
+            else:
+                metrics['fairness_drift_index'] = 1.0
+        except Exception:
             metrics['fairness_drift_index'] = 1.0
     else:
         metrics['fairness_drift_index'] = 1.0
-    
-    return metrics
 
+    return metrics
 # ================================================================
 # EXPLAINABILITY METRICS (1 METRIC)
 # ================================================================
@@ -659,13 +663,30 @@ def calculate_validation_robustness_metrics(df: pd.DataFrame, core_metrics: Dict
 # ================================================================
 
 def add_confidence_intervals(metrics: Dict, df: pd.DataFrame, metric_type: str) -> Dict:
-    """Completely safe confidence intervals - no dictionary modification"""
+    """Genuine sample-size-aware confidence intervals using a normal approximation."""
+    import math
+    import scipy.stats as st
+
     new_metrics = metrics.copy()
-    
+    n = len(df)
+    z = st.norm.ppf(0.975)  # 95% CI
+
     for key, value in metrics.items():
-        new_metrics[f"{key}_ci_lower"] = float(value) * 0.9
-        new_metrics[f"{key}_ci_upper"] = float(value) * 1.1
-    
+        try:
+            p = float(value)
+        except (TypeError, ValueError):
+            continue
+        # Only meaningful for proportion-like metrics in [0, 1]; ratios/other
+        # scales fall back to a conservative +/-10% band rather than a
+        # statistically invalid proportion CI.
+        if 0.0 <= p <= 1.0 and n > 0:
+            se = math.sqrt(p * (1 - p) / n)
+            new_metrics[f"{key}_ci_lower"] = max(0.0, p - z * se)
+            new_metrics[f"{key}_ci_upper"] = min(1.0, p + z * se)
+        else:
+            new_metrics[f"{key}_ci_lower"] = p * 0.9
+            new_metrics[f"{key}_ci_upper"] = p * 1.1
+
     return new_metrics
 
 def calculate_composite_fairness_score(metrics: Dict) -> float:
