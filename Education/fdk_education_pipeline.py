@@ -623,8 +623,8 @@ def calculate_validation_robustness_metrics(df: pd.DataFrame, core_metrics: Dict
     bootstrap_stability = []
     n_bootstraps = 5
     
-    for _ in range(n_bootstraps):
-        bootstrap_sample = df.sample(n=min(500, len(df)//2), replace=True)
+    for i in range(n_bootstraps):
+        bootstrap_sample = df.sample(n=min(500, len(df)//2), replace=True, random_state=42 + i)
         if len(bootstrap_sample['group'].unique()) >= 2:
             group_sel_rates = [bootstrap_sample[bootstrap_sample['group'] == g]['y_pred'].mean() for g in bootstrap_sample['group'].unique()]
             spd_bootstrap = max(group_sel_rates) - min(group_sel_rates) if group_sel_rates else 0
