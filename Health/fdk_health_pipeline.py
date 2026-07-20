@@ -1,6 +1,7 @@
 # ================================================================
 # FDK Health Pipeline - COMPREHENSIVE v4.0
 # 45 Comprehensive Healthcare Fairness Metrics
+# MIT License - AI Ethics Research Group
 # ================================================================
 
 import os
@@ -50,6 +51,7 @@ HEALTH_METRICS_CONFIG = {
     'subgroup_disparity_analysis': [
         'error_disparity_subgroup',
         'worst_group_accuracy',
+        'worst_group_calibration_gap',
         'mdss_subgroup_score',
         'mdss_rich_subgroup_metric'
     ],
@@ -164,10 +166,11 @@ class HealthFairnessPipeline:
         
         # Check group sizes
         group_counts = df['group'].value_counts()
-        small_groups = [group for group, count in group_counts.items() if count < 10]
+        small_groups = [group for group, count in group_counts.items() if count < 20]
         if small_groups:
-            validation_results["warnings"].append(
-                f"Small group sizes may affect reliability: {small_groups}"
+            validation_results["is_valid"] = False
+            validation_results["errors"].append(
+                f"Smallest subgroup(s) below 20 samples (< 20 required for statistical validity): {small_groups}"
             )
         
         return validation_results
