@@ -1021,8 +1021,8 @@ class HealthFairnessPipeline:
             groups = df['group'].unique()
             
             robustness_scores = []
-            for _ in range(5):  # Multiple random splits
-                train_df, test_df = train_test_split(df, test_size=0.3, stratify=df['group'])
+            for i in range(5):  # Multiple random splits
+                train_df, test_df = train_test_split(df, test_size=0.3, stratify=df['group'], random_state=42 + i)
                 
                 # Calculate SPD on both splits
                 train_spd = self._calculate_spd(train_df)
