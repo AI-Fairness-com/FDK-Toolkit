@@ -1,5 +1,6 @@
 # ================================================================
 # FDK Justice App - Interactive Fairness Audit for Justice Domain
+# FIXED VERSION WITH UNIFIED INTELLIGENT SYSTEM
 # ================================================================
 
 import os
@@ -24,60 +25,105 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(REPORT_FOLDER, exist_ok=True)
 
 # ================================================================
-# JUSTICE-SPECIFIC AUTO-DETECTION LOGIC
+# UNIFIED INTELLIGENT SYSTEM INTEGRATION
 # ================================================================
 
-def detect_justice_column_mappings(df, columns):
-    """Auto-detection optimized for justice domain datasets."""
-    suggestions = {'group': None, 'y_true': None, 'y_pred': None, 'y_prob': None}
+try:
+    from FDK import intelligent_target_selection
+    HAS_FDK_INTELLIGENT = True
+except ImportError:
+    HAS_FDK_INTELLIGENT = False
+    print("⚠️ FDK intelligent selection not available, using fallback detection")
+
+def detect_justice_column_mappings(df, columns, test_type='pre_implementation', user_target=None):
+    """
+    Unified column detection with FDK intelligent system integration.
+    Priority: User Override > FDK Intelligent > Justice-specific detection
+    """
+    suggestions = {'group': None, 'y_true': None, 'y_pred': None, 'y_prob': None, 'timestamp': None}
     reasoning = {}
+    intelligent_suggestion = None
     
     for col in columns:
         reasoning[col] = ""
     
-    # Justice-specific column detection logic
+    # STEP 1: FDK INTELLIGENT TARGET SELECTION
+    if HAS_FDK_INTELLIGENT and test_type in ['pre_implementation', 'post_implementation']:
+        try:
+            intelligent_suggestion = intelligent_target_selection(df, test_type, 'justice')
+            if intelligent_suggestion and intelligent_suggestion in df.columns:
+                suggestions['y_true'] = intelligent_suggestion
+                reasoning[intelligent_suggestion] = f"✅ FDK INTELLIGENT SELECTION (test_type: {test_type})"
+                print(f"🎯 FDK Intelligent suggests: {intelligent_suggestion} for {test_type}")
+        except Exception as e:
+            print(f"⚠️ FDK intelligent selection failed: {e}")
+    
+    # STEP 2: USER OVERRIDE (TAKES PRIORITY)
+    if user_target and user_target in df.columns:
+        suggestions['y_true'] = user_target
+        override_source = 'FDK' if intelligent_suggestion else 'auto-detection'
+        reasoning[user_target] = f"✅ USER MANUAL SELECTION (overrides {override_source})"
+        print(f"🎯 User overrides to: {user_target}")
+    
+    # STEP 3: JUSTICE-SPECIFIC DETECTION (for group, y_pred, y_prob, and fallback)
     for col in columns:
         col_data = df[col]
         unique_vals = col_data.unique()
         
         # GROUP COLUMN: Detect defendant/offender demographic groups
-        if col_data.dtype == 'object' or (col_data.nunique() <= 10 and col_data.nunique() > 1):
-            justice_group_keywords = ['race', 'ethnic', 'gender', 'age_group', 'location', 
-                                    'district', 'county', 'socioeconomic']
-            if any(keyword in col.lower() for keyword in justice_group_keywords):
-                suggestions['group'] = col
-                reasoning[col] = "Defendant/offender groups for fairness analysis"
-                continue
-                
-        # Y_TRUE COLUMN: Detect actual justice outcomes (binary)
-        if col_data.dtype in ['int64', 'float64'] and len(unique_vals) == 2:
-            if set(unique_vals).issubset({0, 1}):
-                justice_true_keywords = ['recidivism', 'rearrest', 'violation', 'sentencing', 
-                                       'bail', 'parole', 'conviction']
-                if any(keyword in col.lower() for keyword in justice_true_keywords):
-                    suggestions['y_true'] = col
-                    reasoning[col] = "Justice outcomes (binary: 0/1)"
+        if not suggestions['group']:
+            if col_data.dtype == 'object' or (col_data.nunique() <= 10 and col_data.nunique() > 1):
+                justice_group_keywords = ['race', 'ethnic', 'gender', 'age_group', 'location', 
+                                        'district', 'county', 'socioeconomic']
+                if any(keyword in col.lower() for keyword in justice_group_keywords):
+                    suggestions['group'] = col
+                    reasoning[col] = "Defendant/offender groups for fairness analysis"
                     continue
                     
+        # Y_TRUE COLUMN: Only if not already set by FDK or user
+        if not suggestions['y_true']:
+            if col_data.dtype in ['int64', 'float64'] and len(unique_vals) == 2:
+                if set(unique_vals).issubset({0, 1}):
+                    justice_true_keywords = ['recidivism', 'rearrest', 'violation', 'sentencing', 
+                                           'bail', 'parole', 'conviction']
+                    if any(keyword in col.lower() for keyword in justice_true_keywords):
+                        suggestions['y_true'] = col
+                        reasoning[col] = "Justice outcomes (binary: 0/1)"
+                        continue
+                        
         # Y_PRED COLUMN: Detect algorithm predictions (binary)
-        if col_data.dtype in ['int64', 'float64'] and len(unique_vals) == 2:
-            if set(unique_vals).issubset({0, 1}) and col != suggestions['y_true']:
-                justice_pred_keywords = ['prediction', 'risk_score', 'algorithm', 'model', 'assessment']
-                if any(keyword in col.lower() for keyword in justice_pred_keywords):
-                    suggestions['y_pred'] = col
-                    reasoning[col] = "Justice algorithm predictions (binary: 0/1)"
-                    continue
-                    
+        if not suggestions['y_pred']:
+            if col_data.dtype in ['int64', 'float64'] and len(unique_vals) == 2:
+                if set(unique_vals).issubset({0, 1}) and col != suggestions['y_true']:
+                    justice_pred_keywords = ['prediction', 'predicted', 'risk_score', 'algorithm', 'model',
+                                              'assessment', 'recommended', 'recommendation']
+                    if any(keyword in col.lower() for keyword in justice_pred_keywords):
+                        suggestions['y_pred'] = col
+                        reasoning[col] = "Justice algorithm predictions (binary: 0/1)"
+                        continue
+                        
         # Y_PROB COLUMN: Detect probability scores (continuous 0-1)
-        if col_data.dtype in ['float64', 'float32']:
-            if len(unique_vals) > 2 and col_data.between(0, 1).all():
-                prob_keywords = ['probability', 'score', 'risk', 'likelihood']
-                if any(keyword in col.lower() for keyword in prob_keywords):
-                    suggestions['y_prob'] = col
-                    reasoning[col] = "Risk probability scores (0-1 range)"
+        if not suggestions['y_prob']:
+            if col_data.dtype in ['float64', 'float32']:
+                if len(unique_vals) > 2 and col_data.between(0, 1).all():
+                    prob_keywords = ['probability', 'score', 'risk', 'likelihood']
+                    if any(keyword in col.lower() for keyword in prob_keywords):
+                        suggestions['y_prob'] = col
+                        reasoning[col] = "Risk probability scores (0-1 range)"
+                        continue
+
+        # TIMESTAMP: optional column enabling temporal fairness metrics
+        if not suggestions.get('timestamp'):
+            if any(keyword in col.lower() for keyword in ['timestamp', 'date', 'decision_date', 'time', 'datetime']):
+                try:
+                    pd.to_datetime(df[col], errors='raise')
+                    suggestions['timestamp'] = col
+                    reasoning[col] = "Detected as a parseable date/time column for temporal fairness metrics"
                     continue
+                except Exception:
+                    pass
     
-    # FALLBACK DETECTION
+    # STEP 4: FALLBACK DETECTION
     if not suggestions['group']:
         for col in columns:
             if df[col].dtype == 'object' and df[col].nunique() <= 10:
@@ -100,7 +146,7 @@ def detect_justice_column_mappings(df, columns):
                 reasoning[col] = "Suggested justice predictions (binary)"
                 break
     
-    return suggestions, reasoning
+    return suggestions, reasoning, intelligent_suggestion
 
 # ================================================================
 # JUSTICE-SPECIFIC REPORT GENERATION
@@ -112,7 +158,7 @@ def build_justice_summaries(audit: dict) -> list:
     
     # PROFESSIONAL SUMMARY SECTION
     lines.append("=== JUSTICE PROFESSIONAL SUMMARY ===")
-    lines.append("FDK Fairness Audit — Legal & Justice System Interpretation")
+    lines.append("FDK Fairness Audit – Legal & Justice System Interpretation")
     lines.append(f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     lines.append("")
     
@@ -174,7 +220,7 @@ def build_justice_summaries(audit: dict) -> list:
         if spd > 0.1:
             lines.append("     🚨 HIGH: Significant differences in decision rates across groups")
         elif spd > 0.05:
-            lines.append("     ⚠️  MEDIUM: Noticeable decision rate variations")
+            lines.append("     ⚠️ MEDIUM: Noticeable decision rate variations")
         else:
             lines.append("     ✅ LOW: Consistent decision rates across groups")
         lines.append("")
@@ -186,7 +232,7 @@ def build_justice_summaries(audit: dict) -> list:
         if fpr_diff > 0.1:
             lines.append("     🚨 HIGH: Some groups experience many more false accusations")
         elif fpr_diff > 0.05:
-            lines.append("     ⚠️  MEDIUM: Moderate variation in false accusations")
+            lines.append("     ⚠️ MEDIUM: Moderate variation in false accusations")
         else:
             lines.append("     ✅ LOW: Consistent false positive rates")
         lines.append("")
@@ -200,7 +246,7 @@ def build_justice_summaries(audit: dict) -> list:
         lines.append("   • Implement bias mitigation protocols")
         lines.append("   • Consider external legal audit")
     elif composite_score and composite_score > 0.05:
-        lines.append("   ⚖️  RECOMMENDED LEGAL REVIEW:")
+        lines.append("   ⚖️ RECOMMENDED LEGAL REVIEW:")
         lines.append("   • Schedule systematic fairness review")
         lines.append("   • Monitor decision patterns by group")
         lines.append("   • Document fairness considerations")
@@ -263,6 +309,7 @@ def build_justice_summaries(audit: dict) -> list:
     lines.append("For legal concerns, consult qualified legal professionals.")
     
     return lines
+
 # ================================================================
 # FLASK BLUEPRINT SETUP
 # ================================================================
@@ -270,7 +317,7 @@ def build_justice_summaries(audit: dict) -> list:
 justice_bp = Blueprint('justice', __name__, template_folder='templates')
 
 # ================================================================
-# JUSTICE ROUTES DEFINITION
+# JUSTICE ROUTES DEFINITION - UPDATED
 # ================================================================
 
 @justice_bp.route('/justice-upload')
@@ -281,13 +328,24 @@ def justice_upload_page():
 
 @justice_bp.route('/justice-audit', methods=['POST'])
 def start_justice_audit_process():
-    """Process justice dataset upload and perform auto-detection."""
+    """
+    Process justice dataset upload with unified intelligent system.
+    """
     if 'file' not in request.files:
         return render_template("result_justice.html", title="Error", message="No file uploaded.", summary=None)
 
     file = request.files['file']
     if file.filename == '':
         return render_template("result_justice.html", title="Error", message="Empty filename.", summary=None)
+
+    # ✅ UNIFIED PARAMETER READING
+    user_selected_target = request.form.get('target_column', '').strip()
+    if not user_selected_target:
+        user_selected_target = request.form.get('target_column_fallback', '').strip()
+    
+    test_type = request.form.get('test_type', 'pre_implementation')
+    
+    print(f"🎯 UNIFIED INTELLIGENT SYSTEM: test_type={test_type}, user_target='{user_selected_target}'")
 
     dataset_path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(dataset_path)
@@ -300,7 +358,10 @@ def start_justice_audit_process():
             return render_template("result_justice.html", title="Error", 
                                 message="Dataset too small. Need at least 3 columns.", summary=None)
         
-        suggested_mappings, column_reasoning = detect_justice_column_mappings(df, columns)
+        # ✅ USE UNIFIED DETECTION WITH TEST TYPE AND USER TARGET
+        suggested_mappings, column_reasoning, intelligent_suggestion = detect_justice_column_mappings(
+            df, columns, test_type, user_selected_target
+        )
         
         required_mappings = ['group', 'y_true', 'y_pred']
         missing_required = [m for m in required_mappings if m not in suggested_mappings or not suggested_mappings[m]]
@@ -314,6 +375,9 @@ def start_justice_audit_process():
         session['dataset_columns'] = columns
         session['column_mapping'] = suggested_mappings
         session['column_reasoning'] = column_reasoning
+        session['test_type'] = test_type
+        session['user_selected_target'] = user_selected_target
+        session['intelligent_suggestion'] = intelligent_suggestion
         
         detected_key_features = len([m for m in suggested_mappings.values() if m is not None])
         
@@ -323,7 +387,10 @@ def start_justice_audit_process():
             column_reasoning=column_reasoning,
             total_columns=len(columns),
             detected_key_features=detected_key_features,
-            filename=file.filename
+            filename=file.filename,
+            test_type=test_type,
+            intelligent_suggestion=intelligent_suggestion,
+            user_selected=user_selected_target if user_selected_target else None
         )
         
     except Exception as e:
@@ -332,9 +399,12 @@ def start_justice_audit_process():
 
 @justice_bp.route('/justice-run-audit')
 def run_justice_audit_with_mapping():
-    """Execute justice fairness audit using detected column mappings."""
+    """Execute justice fairness audit with complete metadata."""
     dataset_path = session.get('dataset_path')
     column_mapping = session.get('column_mapping', {})
+    test_type = session.get('test_type', 'pre_implementation')
+    user_selected_target = session.get('user_selected_target', '')
+    intelligent_suggestion = session.get('intelligent_suggestion', None)
     
     if not dataset_path or not column_mapping:
         return render_template("result_justice.html", title="Error", 
@@ -353,6 +423,16 @@ def run_justice_audit_with_mapping():
         for standard_name, original_name in column_mapping.items():
             if original_name and original_name in df.columns:
                 df_mapped[standard_name] = df[original_name].copy()
+
+        # Carry through any remaining original columns as additional features,
+        # excluding pure identifier columns (every value unique -- never a
+        # genuine fairness-relevant feature, and can dominate scale-sensitive
+        # calculations like feature attribution gaps).
+        mapped_originals = set(v for v in column_mapping.values() if v)
+        for col in df.columns:
+            if col not in mapped_originals and col not in df_mapped.columns:
+                if df[col].nunique() < len(df):
+                    df_mapped[col] = df[col].copy()
         
         missing_cols = [col for col in required_mappings if col not in df_mapped.columns]
         if missing_cols:
@@ -366,15 +446,37 @@ def run_justice_audit_with_mapping():
         
         audit_response = run_pipeline(df_mapped)
         
-        # ADD VALIDATION INFO IF MISSING
+        # ✅ COMPLETE METADATA SECTION
+        metadata = {
+            "target_column_used": column_mapping.get('y_true'),
+            "target_column_original": column_mapping.get('y_true'),
+            "prediction_column_used": column_mapping.get('y_pred'),
+            "group_column_used": column_mapping.get('group'),
+            "probability_column_used": column_mapping.get('y_prob'),
+            "test_type": test_type,
+            "intelligent_suggestion": intelligent_suggestion,
+            "user_override_applied": bool(user_selected_target and user_selected_target in df.columns),
+            "user_selected_target": user_selected_target if user_selected_target else None,
+            "timestamp": datetime.now().isoformat(),
+            "dataset_filename": os.path.basename(dataset_path),
+            "fdk_version": "justice_1.0_unified",
+            "column_mapping": column_mapping
+        }
+        
+        audit_response["metadata"] = metadata
+        
+        # Validation info
         if "validation" not in audit_response:
             group_counts = df_mapped['group'].value_counts().to_dict()
             audit_response["validation"] = {
                 "sample_size": len(df_mapped),
                 "groups_analyzed": len(df_mapped['group'].unique()),
                 "statistical_power": "strong" if len(df_mapped) >= 1000 else "adequate" if len(df_mapped) >= 500 else "moderate",
-                "group_counts": group_counts
+                "group_counts": group_counts,
+                "test_type": test_type
             }
+        else:
+            audit_response["validation"]["test_type"] = test_type
         
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         report_filename = f"justice_audit_report_{timestamp}.json"
@@ -390,9 +492,11 @@ def run_justice_audit_with_mapping():
         return render_template(
             "result_justice.html",
             title="Justice Fairness Audit Completed",
-            message="Your justice dataset was audited successfully using 20 fairness metrics.",
+            message=f"Your justice dataset was audited successfully using 36 fairness metrics. Test Type: {test_type.replace('_', ' ').title()}",
             summary=summary_text,
-            report_filename=session['report_filename']
+            report_filename=session['report_filename'],
+            test_type=test_type,
+            metadata=metadata
         )
         
     except Exception as e:

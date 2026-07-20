@@ -527,6 +527,19 @@ class JusticeFairnessPipeline:
         if len(groups) < 2:
             raise ValueError("Need at least 2 groups for justice fairness analysis")
 
+        # Minimum subgroup size check (consistent with other FDK domains)
+        group_counts = df['group'].value_counts()
+        small_groups = group_counts[group_counts < 20]
+        if len(small_groups) > 0:
+            raise ValueError(
+                f"Smallest subgroup(s) below 20 samples (< 20 required for statistical validity): "
+                f"{small_groups.to_dict()}"
+            )
+
+        groups = df['group'].unique()
+        if len(groups) < 2:
+            raise ValueError("Need at least 2 groups for justice fairness analysis")
+
         metrics = {}
         metrics.update(self.calculate_core_group_fairness(df))
         metrics.update(self.calculate_error_performance_fairness(df))
