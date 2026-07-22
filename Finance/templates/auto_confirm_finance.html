@@ -510,53 +510,69 @@
             </div>
 
             <div class="mapping-section">
-                <h3><i class="fas fa-map-marked-alt"></i> Detected Finance Column Mapping:</h3>
-                <p>Your finance fairness audit will be based on these automatically selected features from <strong>{{ filename }}</strong>:</p>
+                <h3><i class="fas fa-map-marked-alt"></i> Confirm Your Finance Column Mapping:</h3>
+                <p>We've made our best guess for each field below from <strong>{{ filename }}</strong>. If anything doesn't look right, just pick a different option from the list — you know your data better than we do.</p>
 
-                <div class="mapping-item">
-                    <strong>{{ suggested_mappings.group }}</strong>
-                    <div class="reasoning">→ Customer Groups for Fairness Analysis</div>
-                    <div class="reasoning"><em>{{ column_reasoning[suggested_mappings.group] }}</em></div>
-                </div>
+                <form action="{{ url_for('finance.run_finance_audit_with_mapping') }}" method="get" id="mappingConfirmForm">
+                    <input type="hidden" name="filename" value="{{ filename }}">
 
-                <div class="mapping-item">
-                    <strong>{{ suggested_mappings.y_true }}</strong>
-                    <div class="reasoning">→ Financial Outcomes & Credit Decisions</div>
-                    <div class="reasoning"><em>{{ column_reasoning[suggested_mappings.y_true] }}</em></div>
-                </div>
+                    <div class="mapping-item">
+                        <label for="group_col"><strong>Customer / Applicant Group</strong> — the column that represents the group you want to check for fairness (e.g. race, gender, region)</label>
+                        <select name="group_col" id="group_col">
+                            {% for col, desc in column_options.group %}
+                            <option value="{{ col }}" {% if col == suggested_mappings.group %}selected{% endif %}>{{ desc }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="reasoning"><em>Our best guess: {{ suggested_mappings.group }} — {{ column_reasoning[suggested_mappings.group] }}</em></div>
+                        <div class="reasoning">In finance datasets, this is often called <code>region</code>, <code>age_group</code>, <code>gender</code>, or <code>income_bracket</code>.</div>
+                    </div>
 
-                <div class="mapping-item">
-                    <strong>{{ suggested_mappings.y_pred }}</strong>
-                    <div class="reasoning">→ Risk Assessments & Algorithm Predictions</div>
-                    <div class="reasoning"><em>{{ column_reasoning[suggested_mappings.y_pred] }}</em></div>
-                </div>
+                    <div class="mapping-item">
+                        <label for="y_true_col"><strong>Actual Outcome</strong> — what actually happened (e.g. did they default, get approved, repay the loan?)</label>
+                        <select name="y_true_col" id="y_true_col">
+                            {% for col, desc in column_options.y_true %}
+                            <option value="{{ col }}" {% if col == suggested_mappings.y_true %}selected{% endif %}>{{ desc }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="reasoning"><em>Our best guess: {{ suggested_mappings.y_true }} — {{ column_reasoning[suggested_mappings.y_true] }}</em></div>
+                        <div class="reasoning">In finance datasets, this is often called <code>default</code>, <code>approved</code>, or <code>loan_status</code>.</div>
+                    </div>
 
-                {% if suggested_mappings.y_prob %}
-                <div class="mapping-item">
-                    <strong>{{ suggested_mappings.y_prob }}</strong>
-                    <div class="reasoning">→ Confidence Scores & Probability Values</div>
-                    <div class="reasoning"><em>{{ column_reasoning[suggested_mappings.y_prob] }}</em></div>
-                </div>
-                {% endif %}
+                    <div class="mapping-item">
+                        <label for="y_pred_col"><strong>Model's Decision</strong> — what the algorithm predicted or decided (must be a different column from the actual outcome above)</label>
+                        <select name="y_pred_col" id="y_pred_col">
+                            {% for col, desc in column_options.y_pred %}
+                            <option value="{{ col }}" {% if col == suggested_mappings.y_pred %}selected{% endif %}>{{ desc }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="reasoning"><em>Our best guess: {{ suggested_mappings.y_pred }} — {{ column_reasoning[suggested_mappings.y_pred] }}</em></div>
+                        <div class="reasoning">In finance datasets, this is often called <code>predicted</code>, <code>risk_score</code>, or <code>model_decision</code>.</div>
+                    </div>
+
+                    {% if column_options.y_prob %}
+                    <div class="mapping-item">
+                        <label for="y_prob_col"><strong>Confidence Score</strong> — a decimal risk/probability score, if your dataset has one (optional)</label>
+                        <select name="y_prob_col" id="y_prob_col">
+                            <option value="">(none — skip this)</option>
+                            {% for col, desc in column_options.y_prob %}
+                            <option value="{{ col }}" {% if col == suggested_mappings.y_prob %}selected{% endif %}>{{ desc }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if suggested_mappings.y_prob %}
+                        <div class="reasoning"><em>Our best guess: {{ suggested_mappings.y_prob }} — {{ column_reasoning[suggested_mappings.y_prob] }}</em></div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </form>
             </div>
 
             <div class="run-audit-section">
                 <h2><i class="fas fa-rocket"></i> Run Finance Fairness Audit on {{ filename }}</h2>
-                <p>30 finance fairness metrics will be analyzed using the detected column mapping from your uploaded dataset</p>
+                <p>30 finance fairness metrics will be analyzed using the column mapping confirmed above</p>
                 <p><em>Finance Domain Coverage • Regulatory Compliance • Automated Detection</em></p>
-
-                <form action="{{ url_for('finance.run_finance_audit_with_mapping') }}" method="get">
-                    <input type="hidden" name="filename" value="{{ filename }}">
-                    <input type="hidden" name="group_col" value="{{ suggested_mappings.group }}">
-                    <input type="hidden" name="y_true_col" value="{{ suggested_mappings.y_true }}">
-                    <input type="hidden" name="y_pred_col" value="{{ suggested_mappings.y_pred }}">
-                    {% if suggested_mappings.y_prob %}
-                    <input type="hidden" name="y_prob_col" value="{{ suggested_mappings.y_prob }}">
-                    {% endif %}
-                    <button type="submit" class="run-btn">
-                        <i class="fas fa-play-circle"></i> RUN FINANCE FAIRNESS AUDIT
-                    </button>
-                </form>
+                <button type="submit" form="mappingConfirmForm" class="run-btn">
+                    <i class="fas fa-play-circle"></i> RUN FINANCE FAIRNESS AUDIT
+                </button>
             </div>
         </div>
 
