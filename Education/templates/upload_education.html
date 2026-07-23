@@ -779,6 +779,21 @@
                                     You can override the intelligent suggestion if needed
                                 </div>
                             </div>
+
+                            <!-- GROUP COLUMN SELECTOR (manual override -- the API preview doesn't
+                                 return a suggested group, so this always shows every column with
+                                 no pre-selection; the actual auto-detected group only appears
+                                 after the full audit runs, in the report's group_column_used) -->
+                            <input type="hidden" name="group_column" id="autoGroupColumn" value="">
+                            <div id="groupWrap" style="display: none; margin-top: 20px;">
+                                <div style="margin-bottom: 8px; font-weight: 600; color: #2c3e50;">
+                                    Group column (protected attribute for fairness comparison)
+                                </div>
+                                <select name="group_column" id="groupColumn"></select>
+                                <div id="groupHint" style="margin-top: 8px; color: #7f8c8d; font-size: 0.95em;">
+                                    Select the column representing the protected attribute (e.g. race, gender) -- leave unset to use auto-detection
+                                </div>
+                            </div>
                         </div>
 
                         <div class="file-input-wrapper">
@@ -898,6 +913,10 @@
             const targetWrap = document.getElementById('targetWrap');
             const targetSelect = document.getElementById('targetColumn');
             const targetHint = document.getElementById('targetHint');
+            const autoGroupColumn = document.getElementById('autoGroupColumn');
+            const groupWrap = document.getElementById('groupWrap');
+            const groupSelect = document.getElementById('groupColumn');
+            const groupHint = document.getElementById('groupHint');
             
             const testTypeRadios = document.querySelectorAll('input[name="test_type"]');
 
@@ -905,6 +924,13 @@
                 targetSelect.innerHTML = '';
                 targetHint.textContent = 'You can override the intelligent suggestion if needed';
                 targetWrap.style.display = 'none';
+            }
+
+            function resetGroupUI() {
+                groupSelect.innerHTML = '';
+                autoGroupColumn.value = '';
+                groupHint.textContent = 'Select the column representing the protected attribute (e.g. race, gender) -- leave unset to use auto-detection';
+                groupWrap.style.display = 'none';
             }
             
             // Test type radio button handlers - per Phase 2, Step 4
@@ -998,6 +1024,21 @@
                             targetSelect.appendChild(opt);
                         });
                         targetWrap.style.display = 'block';
+
+                        // Group dropdown: no suggested value from this preview endpoint,
+                        // so populate with every column and let the user pick manually.
+                        groupSelect.innerHTML = '';
+                        const placeholderOpt = document.createElement('option');
+                        placeholderOpt.value = '';
+                        placeholderOpt.textContent = '(use auto-detection)';
+                        groupSelect.appendChild(placeholderOpt);
+                        data.columns.forEach(col => {
+                            const opt = document.createElement('option');
+                            opt.value = col;
+                            opt.textContent = col;
+                            groupSelect.appendChild(opt);
+                        });
+                        groupWrap.style.display = 'block';
                     }
                     
                     // Show success message with selected column - per protocol
@@ -1025,10 +1066,19 @@
                 autoTargetColumn.value = manualSelection;
                 hintText.innerHTML = `⚠️ Manual override: <strong>${manualSelection}</strong> (overrides intelligent suggestion)`;
             });
+
+            groupSelect.addEventListener('change', function() {
+                const manualGroup = this.value;
+                autoGroupColumn.value = manualGroup;
+                groupHint.textContent = manualGroup
+                    ? `⚠️ Manual override: using "${manualGroup}" as the group column`
+                    : 'Select the column representing the protected attribute (e.g. race, gender) -- leave unset to use auto-detection';
+            });
             
             // Initialize hint - per protocol
             updateTestTypeHint('pre_implementation');
             resetTargetUI();
+            resetGroupUI();
             
             // Initialize label container active states
             document.querySelectorAll('.test-type-option').forEach(container => {
