@@ -875,7 +875,7 @@
             <div class="footer-tile">
                 <div class="footer-tile-icon" aria-hidden="true"><i class="fas fa-wand-magic-sparkles"></i></div>
                 <div class="footer-tile-title">Intelligent Column Detection</div>
-                <div class="footer-tile-text">FDK automatically identifies the appropriate target column from your dataset based on the selected test type — no manual configuration required.</div>
+                <div class="footer-tile-text">FDK automatically identifies the appropriate target column from your dataset based on the selected test type, and lets you review or adjust the selection before running the audit.</div>
             </div>
             <div class="footer-tile">
                 <div class="footer-tile-icon" aria-hidden="true"><i class="fas fa-user-graduate"></i></div>
@@ -976,6 +976,50 @@
             }
             
             // File input handler with intelligent target detection - per Phase 2, Step 4
+            // Reads just the header row of the chosen file client-side, so
+            // both dropdowns are populated and usable immediately, regardless
+            // of whether the /api/detect-columns call below succeeds or fails.
+            // This is what the previous version was missing: on a failed API
+            // call, the dropdowns were revealed but left with zero options.
+            function populateColumnDropdownsFromHeader(file) {
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = function (evt) {
+                        const firstLine = evt.target.result.split(/\r?\n/)[0] || '';
+                        const headers = firstLine.split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+
+                        targetSelect.innerHTML = '';
+                        const targetBlank = document.createElement('option');
+                        targetBlank.value = '';
+                        targetBlank.textContent = '— select a column —';
+                        targetSelect.appendChild(targetBlank);
+                        headers.forEach(h => {
+                            const opt = document.createElement('option');
+                            opt.value = h;
+                            opt.textContent = h;
+                            targetSelect.appendChild(opt);
+                        });
+                        targetWrap.style.display = 'block';
+
+                        groupSelect.innerHTML = '';
+                        const groupBlank = document.createElement('option');
+                        groupBlank.value = '';
+                        groupBlank.textContent = '(use auto-detection)';
+                        groupSelect.appendChild(groupBlank);
+                        headers.forEach(h => {
+                            const opt = document.createElement('option');
+                            opt.value = h;
+                            opt.textContent = h;
+                            groupSelect.appendChild(opt);
+                        });
+                        groupWrap.style.display = 'block';
+
+                        resolve();
+                    };
+                    reader.readAsText(file.slice(0, 65536)); // header row only
+                });
+            }
+
             fileInput.addEventListener('change', async function (e) {
                 if (e.target.files.length === 0) {
                     fileName.textContent = '';
@@ -985,6 +1029,10 @@
                 const file = e.target.files[0];
                 fileName.textContent = 'Selected: ' + file.name;
                 fileName.style.color = '#27ae60';
+
+                // Populate both dropdowns from the file's own header row
+                // immediately -- independent of the server call below.
+                await populateColumnDropdownsFromHeader(file);
                 
                 // Get selected test type - per protocol
                 const selectedTestType = document.querySelector('input[name="test_type"]:checked').value;
