@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FDK Education Fairness Audit</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #D97B0A; /* Education Amber — the site's official Education domain colour */
+            --primary-dark: #B8650A;
+            --secondary: #FFC93C; /* electric gold — signature accent shared across the FDK family */
+            --secondary-dark: #E0A800;
+            --accent: #00E0FF; /* cyan */
+            --accent2: #FF3D8A; /* magenta */
+            --node-gold: #FFDD5C;
+            --node-gold-deep: #E0A800;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --gray: #7f8c8d;
+            --gradient: linear-gradient(135deg, #2E1A00 0%, #B8650A 55%, #D97B0A 100%);
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--gradient);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .glass-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 25px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .hero-section {
+            background: linear-gradient(150deg, #1A1400 0%, #2E2200 40%, var(--primary-dark) 75%, var(--primary) 130%);
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--secondary), var(--accent), var(--accent2));
+        }
+
+        .hero-section::after {
+            content: '';
+            position: absolute;
+            bottom: -50px;
+            right: -50px;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(217, 123, 10, 0.18) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        /* ══════════════════════════════════════════════════════
+           FLYING ELECTRONS — the FDK-family signature. Identical
+           mechanism to Justice/Business. Universal gold nodes.
+        ══════════════════════════════════════════════════════ */
+        .electron-field {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+        .electron {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: var(--size);
+            height: var(--size);
+            margin: calc(var(--size) / -2);
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%, #FFF6D8 0%, var(--node-gold) 55%, var(--node-gold-deep) 100%);
+            box-shadow:
+                0 0 8px 2px var(--node-gold),
+                0 0 22px 6px color-mix(in srgb, var(--node-gold) 75%, transparent),
+                0 0 46px 14px color-mix(in srgb, var(--node-gold) 40%, transparent);
+            animation: electronOrbit var(--dur) cubic-bezier(0.45, 0, 0.55, 1) infinite,
+                       electronGlow calc(var(--dur) / 3) ease-in-out infinite;
+        }
+        @keyframes electronOrbit {
+            from { transform: translate(-50%, -50%) rotate(0deg) translateX(var(--rx)) rotate(0deg) scaleY(var(--squash)); }
+            to   { transform: translate(-50%, -50%) rotate(360deg) translateX(var(--rx)) rotate(-360deg) scaleY(var(--squash)); }
+        }
+        @keyframes electronGlow {
+            0%, 100% { opacity: 1; }
+            50%      { opacity: 0.55; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .electron { animation: none; }
+        }
+        @media (max-width: 768px) {
+            .electron-field { display: none; }
+        }
+
+        .hero-content-inner {
+            position: relative;
+            z-index: 2;
+        }
+
+        .logo-icon {
+            display: inline-block;
+            color: #D97B0A;
+            transition: transform 0.4s ease, filter 0.4s ease, color 0.4s ease;
+        }
+        .logo:hover .logo-icon {
+            color: #00E0FF;
+            transform: rotate(-8deg) scale(1.12);
+            filter: drop-shadow(0 0 12px var(--accent));
+        }
+
+        /* ── AI FAIRNESS CIO BRAND BAR ── */
+        .brand-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            padding: 18px 40px 14px;
+        }
+        .brand-mark {
+            flex-shrink: 0;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            object-fit: cover;
+            display: block;
+        }
+        .brand-mark-fallback {
+            background: var(--primary);
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+        }
+        .brand-name {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--primary);
+            line-height: 1.2;
+        }
+        .brand-reg {
+            font-size: 0.68rem;
+            color: var(--gray);
+            line-height: 1.3;
+        }
+
+        /* ── FOOTER ── */
+        .site-footer {
+            background: linear-gradient(150deg, #1A1400 0%, #2E2200 60%, var(--primary-dark) 130%);
+            padding: 40px 40px 32px;
+        }
+        .footer-tiles {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+            margin-bottom: 30px;
+        }
+        .footer-tile {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px;
+            padding: 18px 20px;
+            transition: border-color 0.25s ease, transform 0.25s ease;
+        }
+        .footer-tile:hover { border-color: var(--secondary); transform: translateY(-3px); }
+        .footer-tile-icon { font-size: 1.2rem; color: var(--secondary); margin-bottom: 8px; }
+        .footer-tile-title { font-size: 0.85rem; font-weight: 700; color: #fff; margin-bottom: 4px; }
+        .footer-tile-text { font-size: 0.76rem; color: rgba(255,255,255,0.5); line-height: 1.55; }
+        .footer-bottom {
+            display: flex; align-items: center; justify-content: space-between;
+            padding-top: 22px; border-top: 1px solid rgba(255,255,255,0.12);
+            flex-wrap: wrap; gap: 12px;
+        }
+        .footer-legal { font-size: 0.73rem; color: rgba(255,255,255,0.4); line-height: 1.6; max-width: 560px; }
+        .footer-links { display: flex; gap: 16px; flex-wrap: wrap; }
+        .footer-link {
+            font-size: 0.78rem; color: rgba(255,255,255,0.55); text-decoration: none;
+            display: flex; align-items: center; gap: 5px; transition: color 0.2s ease;
+        }
+        .footer-link:hover { color: var(--accent); }
+        @media (max-width: 768px) {
+            .footer-tiles { grid-template-columns: 1fr; }
+            .footer-bottom { flex-direction: column; align-items: flex-start; }
+            .site-footer { padding: 32px 20px; }
+        }
+
+        .logo {
+            font-size: 3.5em;
+            font-weight: 800;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #fff, #ecf0f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .domain-title {
+            font-size: 2.2em;
+            font-weight: 600;
+            margin-bottom: 20px;
+            opacity: 0.95;
+        }
+
+        .tagline {
+            font-size: 1.3em;
+            opacity: 0.9;
+            margin-bottom: 25px;
+            font-weight: 300;
+        }
+
+        .metrics-badge {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 30px;
+            font-size: 1.1em;
+            font-weight: 600;
+            display: inline-block;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .content-section {
+            padding: 50px 40px;
+        }
+
+        .description-card {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            padding: 40px;
+            border-radius: 20px;
+            margin-bottom: 50px;
+            border-left: 6px solid var(--secondary);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        }
+
+        .description-title {
+            color: var(--dark);
+            font-size: 1.6em;
+            margin-bottom: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .description-title i {
+            color: var(--secondary);
+            font-size: 1.2em;
+        }
+
+        .description-text {
+            color: var(--gray);
+            font-size: 1.1em;
+            line-height: 1.7;
+        }
+
+        .upload-section {
+            margin-bottom: 50px;
+        }
+
+        .upload-card {
+            background: white;
+            border-radius: 20px;
+            padding: 50px;
+            text-align: center;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+            border: 2px dashed var(--primary);
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(102, 0, 51, 0.05), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .upload-card:hover::before {
+            left: 100%;
+        }
+
+        .upload-card:hover {
+            transform: translateY(-8px);
+            border-color: var(--secondary);
+            box-shadow: 0 25px 50px rgba(102, 0, 51, 0.2);
+        }
+
+        .upload-icon {
+            font-size: 5em;
+            color: var(--primary);
+            margin-bottom: 25px;
+            display: block;
+            transition: all 0.3s ease;
+        }
+
+        .upload-card:hover .upload-icon {
+            color: var(--secondary);
+            transform: scale(1.1);
+        }
+
+        .upload-title {
+            color: var(--dark);
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .upload-subtitle {
+            color: var(--gray);
+            font-size: 1.1em;
+            margin-bottom: 30px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            margin: 25px 0;
+        }
+
+        .file-input {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-input-label {
+            display: inline-block;
+            padding: 18px 35px;
+            background: linear-gradient(150deg, #1A1400 0%, #2E2200 40%, var(--primary-dark) 75%, var(--primary) 130%);
+            color: white;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(217, 123, 10, 0.4);
+            font-size: 1.1em;
+        }
+
+        .file-input-label:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(217, 123, 10, 0.6);
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, var(--secondary), var(--secondary-dark));
+            color: white;
+            border: none;
+            padding: 20px 60px;
+            font-size: 1.3em;
+            font-weight: 600;
+            border-radius: 35px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(224, 168, 0, 0.4);
+            letter-spacing: 0.5px;
+            margin-top: 20px;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 15px 35px rgba(224, 168, 0, 0.5);
+            background: linear-gradient(135deg, var(--secondary-dark), var(--secondary));
+        }
+
+        .features-section {
+            margin: 60px 0;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 30px;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 40px 30px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            border-top: 5px solid var(--primary);
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+
+        .feature-icon {
+            font-size: 3em;
+            margin-bottom: 25px;
+            color: var(--primary);
+            display: block;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover .feature-icon {
+            color: var(--secondary);
+            transform: scale(1.1);
+        }
+
+        .feature-title {
+            color: var(--dark);
+            font-size: 1.4em;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .feature-description {
+            color: var(--gray);
+            line-height: 1.6;
+        }
+
+        .legal-section {
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+            border: 1px solid var(--warning);
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 50px;
+            position: relative;
+            border-left: 6px solid var(--warning);
+        }
+
+        .legal-icon {
+            position: absolute;
+            top: -15px;
+            left: 30px;
+            background: white;
+            padding: 10px;
+            border-radius: 50%;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            color: var(--warning);
+        }
+
+        .legal-content {
+            margin-left: 50px;
+        }
+
+        .legal-title {
+            color: #856404;
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .legal-text {
+            color: #856404;
+            line-height: 1.6;
+        }
+
+        /* Test Type Selector — EXACT structure/class names as Justice */
+        .test-type-selector {
+            margin: 25px 0;
+            padding: 20px;
+            background: rgba(248, 249, 250, 0.7);
+            border-radius: 15px;
+            border: 1px solid rgba(217, 123, 10, 0.1);
+        }
+
+        .test-type-label {
+            display: block;
+            margin-bottom: 12px;
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 1.1em;
+        }
+
+        .test-type-options {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .test-type-option {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 12px 20px;
+            background: white;
+            border-radius: 12px;
+            border: 2px solid var(--primary);
+            transition: all 0.3s ease;
+            min-width: 220px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .test-type-option:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(217, 123, 10, 0.15);
+        }
+
+        .test-type-option.post {
+            border-color: var(--secondary);
+        }
+
+        .test-type-radio {
+            margin-right: 12px;
+            transform: scale(1.2);
+        }
+
+        .test-type-content {
+            flex: 1;
+            text-align: left;
+        }
+
+        .test-type-title {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 1em;
+        }
+
+        .test-type-description {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+
+        .test-type-hint {
+            margin-top: 12px;
+            padding: 12px;
+            background: #E0FBFF;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent);
+            font-size: 0.95em;
+            line-height: 1.5;
+        }
+
+        .test-type-hint.post {
+            background: #FFF6DC;
+            border-left-color: var(--secondary);
+        }
+
+        .test-type-hint i {
+            color: var(--accent);
+            margin-right: 8px;
+        }
+
+        .test-type-hint.post i {
+            color: var(--secondary);
+        }
+
+        .test-type-hint-text {
+            display: inline;
+        }
+
+        /* Unified System Notice */
+        .unified-system-notice {
+            background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+            border: 1px solid #66bb6a;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px auto;
+            max-width: 800px;
+            text-align: center;
+            font-size: 0.9em;
+            color: #2e7d32;
+            display: none;
+        }
+
+        .unified-system-notice i {
+            margin-right: 8px;
+        }
+
+        /* Hide WordPress page title */
+        .entry-title, .page-title, h1.entry-title, .post-title, h1 { 
+            display: none !important; 
+        }
+
+        @media (max-width: 768px) {
+            .glass-container {
+                margin: 10px;
+                border-radius: 20px;
+            }
+            
+            .hero-section {
+                padding: 40px 20px;
+            }
+            
+            .content-section {
+                padding: 30px 20px;
+            }
+            
+            .logo {
+                font-size: 2.8em;
+            }
+            
+            .upload-card {
+                padding: 30px 20px;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .description-card {
+                padding: 30px 20px;
+            }
+            
+            .legal-content {
+                margin-left: 0;
+                margin-top: 30px;
+            }
+            
+            .test-type-options {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .test-type-option {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+
+        .file-name {
+            display: block;
+            margin-top: 10px;
+            color: var(--success);
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+    </style>
+</head>
+<body>
+    <div class="glass-container">
+  <!-- ── BRAND BAR ─────────────────────────────────────────────── -->
+  <div class="brand-bar" role="banner">
+    <img class="brand-mark" src="data:image/png;base64,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iKTAwiIiIimwsIiISAosLCIikgILi4iIpMDCIiIiKbCwiIhICiwsIiKSAguLiIikwMIiIiIpsLCIiEgKLCwiIpICC4uIiKTAwiIiIimwsIiISAosLCIikgILi4iIpMDCIiIiKbCwiIhICiwsIiKSAguLiIikwMIiIiIpsLCIiEgKLCwiIpICC4uIiKTAwiIiIimwsIiISAosLCIikgILi4iIpMDCIiIiKbCwiIhICiwsIiKSAguLiIikwMIiIiIpsLCIiEgKLCwiIpICC4uIiKTAwiIiIimwsIiISAosLCIikgILi4iIpMDCIiIiKbCwiIhICiwsIiKSAguLiIikwMIiIiIpsLCIiEgKLCwiIpICC4uIiKTAwiIiIimwsIiISAosLCIikgILi4iIpMDCIiIiKbCwiIhICiwsIiKSAguLiIikwMIiIiIpsLCIiEgKLCwiIpICC4uIiKTAwiIiIimwsIiISAosLCIikgILi4iIpMDCIiIiKbCwiIhICiwsIiKSAguLiIikwMIiIiIpsLCIiEgKLCwiIpICC4uIiKTAwiIiIimwsIiISAosLCIikgILi4iIpMDCIiIiKbCwiIhICiwsIiKSAguLiIikwMIiIiIpsLCIiEgKLCwiIpICC4uIiKTAwiIiIimwsIiISAosLCIikgILi4iIpMDCIiIiKbCwiIhICiwsIiKSAguLiIikwMIiIiIpsLCIiEgKLCwiIpICC4uIiKTAwiIiIimwsIiISAosLCIikgILi4iIpMDCIiIiKbCwiIhICiwsIiKSAguLiIikwMIiIiIpsLCIiEgKLCwiIpKCLjqA7BLjEhCfmCA6xnFLcMeLjkDUZIkJCfCZPtExjpvbHSs6QkRQ/H6/IzoEERHRsfCSIBERSYGFRUREUmBhERGRFFhYREQkBRYWERFJgYVFRERSYGEREZEUWFhERCQFFhYREUmBhUVERFJgYRERkRRYWEREJAUWFhERSYGFRUREUmBhERGRFFhYREQkBRYWERFJgYVFRERSYGEREZEUWFhERCQFFhYREUmBhUVERFL4/wVcrY+Nuh3nAAAAAElFTkSuQmCC" alt="AI Fairness CIO logo"
+         onerror="this.outerHTML='&lt;div class=&quot;brand-mark brand-mark-fallback&quot; aria-hidden=&quot;true&quot;&gt;Fi&lt;/div&gt;'" />
+    <div class="brand-text">
+      <div class="brand-name">AI Fairness CIO</div>
+      <div class="brand-reg">Charity Commission for England and Wales &middot; Registered Charity No. 1218464</div>
+    </div>
+  </div>
+        <div class="hero-section">
+            <div class="electron-field" aria-hidden="true">
+                <div class="electron" style="--size:8px;  --rx:60px;  --dur:8s;  --squash:0.55;"></div>
+                <div class="electron" style="--size:6px;  --rx:95px;  --dur:13s; --squash:0.8;  animation-direction:reverse, normal;"></div>
+                <div class="electron" style="--size:9px;  --rx:130px; --dur:11s; --squash:0.4;"></div>
+                <div class="electron" style="--size:5px;  --rx:165px; --dur:19s; --squash:0.7;  animation-direction:reverse, normal;"></div>
+                <div class="electron" style="--size:7px;  --rx:200px; --dur:24s; --squash:0.5;"></div>
+                <div class="electron" style="--size:4px;  --rx:235px; --dur:16s; --squash:0.85; animation-direction:reverse, normal;"></div>
+            </div>
+            <div class="hero-content-inner">
+                <div class="logo">
+                    <svg class="logo-icon" width="0.9em" height="0.9em" viewBox="0 0 24 24" fill="none" style="vertical-align: -0.1em;" aria-hidden="true"><path d="M12 4 L22 9 L12 14 L2 9 Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M6 11 V17 C6 18.5 8.5 20 12 20 C15.5 20 18 18.5 18 17 V11" stroke="currentColor" stroke-width="2"/></svg> FDK™ Education
+                </div>
+                <div class="domain-title">Education Domain Equity Audit</div>
+                <div class="tagline">Upload Education Dataset (CSV) for Educational Equity Analysis</div>
+                <div class="metrics-badge">
+                    <i class="fas fa-chart-line"></i> 26 Education Fairness Metrics
+                </div>
+            </div>
+        </div>
+
+        <div class="content-section">
+            <div class="description-card">
+                <div class="description-title">
+                    <i class="fas fa-book-open"></i> Admission Decisions • Student Groups • Placement Assessments • Educational Equity
+                </div>
+                <div class="description-text">
+                    Upload your education dataset to analyze fairness across student demographics, detect algorithmic bias in admission processes, 
+                    and ensure equitable educational opportunities. Our comprehensive audit identifies disparities in access, outcomes, and resource allocation.
+                </div>
+            </div>
+
+            <div class="upload-section">
+                <form action="/education/education-audit" method="post" enctype="multipart/form-data" id="educationAuditForm">
+                    <div class="upload-card">
+                        <div class="upload-icon">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                        </div>
+                        <div class="upload-title">Upload Education Dataset</div>
+                        <div class="upload-subtitle">Select a CSV file containing education data for comprehensive equity analysis</div>
+                        
+                        <!-- UNIFIED PROTOCOL COMPLIANT: Test Type Selector - Phase 2, Step 3 -->
+                        <div id="testTypeSelector" class="test-type-selector">
+                            <div class="test-type-label">
+                                <i class="fas fa-vial"></i> Fairness Test Type
+                            </div>
+
+                            <div class="test-type-options">
+                                <label class="test-type-option active">
+                                    <input type="radio" name="test_type" value="pre_implementation" 
+                                           checked class="test-type-radio">
+                                    <div class="test-type-content">
+                                        <div class="test-type-title">Pre-Implementation Test</div>
+                                        <div class="test-type-description">Baseline fairness of original algorithm</div>
+                                    </div>
+                                </label>
+                                
+                                <label class="test-type-option post">
+                                    <input type="radio" name="test_type" value="post_implementation" 
+                                           class="test-type-radio">
+                                    <div class="test-type-content">
+                                        <div class="test-type-title">Post-Implementation Test</div>
+                                        <div class="test-type-description">Fairness after bias correction</div>
+                                    </div>
+                                </label>
+                            </div>
+                            
+                            <div id="testTypeHint" class="test-type-hint">
+                                <i class="fas fa-info-circle"></i>
+                                <span id="hintText" class="test-type-hint-text">
+                                    <strong>Pre-Implementation:</strong> Test original algorithm fairness. 
+                                    <strong>Post-Implementation:</strong> Test bias-corrected algorithm fairness.
+                                </span>
+                            </div>
+                            
+                            <!-- UNIFIED PROTOCOL: Hidden target column field - Phase 2, Step 3 -->
+                            <input type="hidden" name="target_column_fallback" id="autoTargetColumn" value="">
+
+                            <!-- TARGET COLUMN SELECTOR (manual override, matches Finance's pattern) -->
+                            <div id="targetWrap" style="display: none;">
+                                <div style="margin-bottom: 8px; font-weight: 600; color: #2c3e50;">
+                                    Target column (intelligent suggestion selected)
+                                </div>
+                                <select name="target_column" id="targetColumn"></select>
+                                <div id="targetHint" style="margin-top: 8px; color: #7f8c8d; font-size: 0.95em;">
+                                    You can override the intelligent suggestion if needed
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="file-input-wrapper">
+                            <input type="file" name="file" accept=".csv" required class="file-input" id="educationFile">
+                            <label for="educationFile" class="file-input-label">
+                                <i class="fas fa-file-csv"></i> Choose CSV File
+                            </label>
+                            <span class="file-name" id="fileName"></span>
+                        </div>
+                        
+                        <button type="submit" class="submit-btn">
+                            <i class="fas fa-play-circle"></i> Run Education Equity Audit
+                        </button>
+
+                        <!-- Unified System Notice -->
+                        <div class="unified-system-notice" id="unifiedSystemNotice">
+                            <i class="fas fa-robot"></i> FDK Intelligent Selection System: AI-powered column detection enabled
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="features-section">
+                <div class="features-grid">
+                    <a class="feature-card" href="https://ai-fairness.com/education-bias-detection/">
+                        <div class="feature-icon">
+                            <i class="fas fa-search-plus"></i>
+                        </div>
+                        <div class="feature-title">Admission Equity Analysis</div>
+                        <div class="feature-description">
+                            Detect bias in admission decisions, scholarship allocations, and program placements across diverse student populations.
+                        </div>
+                    </a>
+                    
+                    <a class="feature-card" href="https://ai-fairness.com/education-compliance/">
+                        <div class="feature-icon">
+                            <i class="fas fa-user-graduate"></i>
+                        </div>
+                        <div class="feature-title">Educational Compliance</div>
+                        <div class="feature-description">
+                            26 specialized fairness metrics aligned with educational equity standards, civil rights, and equal opportunity guidelines.
+                        </div>
+                    </a>
+                    
+                    <a class="feature-card" href="https://ai-fairness.com/education-equity-analytics/">
+                        <div class="feature-icon">
+                            <i class="fas fa-chart-pie"></i>
+                        </div>
+                        <div class="feature-title">Learning Equity Analytics</div>
+                        <div class="feature-description">
+                            Comprehensive assessment with visual analytics, achievement gap reports, and recommendations for equitable education.
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <div class="legal-section">
+                <div class="legal-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="legal-content">
+                    <div class="legal-title">Educational Disclaimer</div>
+                    <div class="legal-text">
+                        This tool provides fairness assessment and analytical insights for educational data analysis and research purposes only. 
+                        It supports institutional equity efforts but does not replace professional educational consultation or legal compliance review.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-tiles">
+            <div class="footer-tile">
+                <div class="footer-tile-icon" aria-hidden="true"><i class="fas fa-chart-line"></i></div>
+                <div class="footer-tile-title">26 Education Fairness Metrics</div>
+                <div class="footer-tile-text">Admission, scholarship, and placement disparities measured across student demographics, aligned with educational equity and civil-rights standards.</div>
+            </div>
+            <div class="footer-tile">
+                <div class="footer-tile-icon" aria-hidden="true"><i class="fas fa-wand-magic-sparkles"></i></div>
+                <div class="footer-tile-title">Intelligent Column Detection</div>
+                <div class="footer-tile-text">FDK automatically identifies the appropriate target column from your dataset based on the selected test type, and lets you review or adjust the selection before running the audit.</div>
+            </div>
+            <div class="footer-tile">
+                <div class="footer-tile-icon" aria-hidden="true"><i class="fas fa-user-graduate"></i></div>
+                <div class="footer-tile-title">Educational Compliance Aligned</div>
+                <div class="footer-tile-text">Metrics mapped to educational equity standards and equal-opportunity guidelines — supporting evidence-based institutional review.</div>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p class="footer-legal">
+                This tool provides fairness assessment for research and analytical purposes only and does not constitute legal or educational compliance advice.
+                AI Fairness CIO &middot; Charity Commission for England and Wales &middot; Registered Charity No. 1218464.
+            </p>
+            <div class="footer-links">
+                <a href="https://ai-fairness.com/education-compliance/" class="footer-link">
+                    <i class="fas fa-user-graduate" aria-hidden="true"></i> Compliance
+                </a>
+                <a href="https://ai-fairness.com/education-equity-analytics/" class="footer-link">
+                    <i class="fas fa-chart-pie" aria-hidden="true"></i> Equity Analytics
+                </a>
+                <a href="mailto:hello@ai-fairness.com" class="footer-link">
+                    <i class="fas fa-envelope" aria-hidden="true"></i> Contact
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const fileInput = document.getElementById('educationFile');
+            const fileName = document.getElementById('fileName');
+            const autoTargetColumn = document.getElementById('autoTargetColumn');
+            const testTypeHint = document.getElementById('testTypeHint');
+            const hintText = document.getElementById('hintText');
+            const targetWrap = document.getElementById('targetWrap');
+            const targetSelect = document.getElementById('targetColumn');
+            const targetHint = document.getElementById('targetHint');
+
+            // Populated once per uploaded file by computeCandidateTargetColumns()
+            // below, then reused to filter the server's /api/detect-columns
+            // response so the dropdown stays consistent either way.
+            let sampledAllHeaders = [];
+            let sampledCandidateColumns = [];
+
+            const testTypeRadios = document.querySelectorAll('input[name="test_type"]');
+
+            function resetTargetUI() {
+                targetSelect.innerHTML = '';
+                targetHint.textContent = 'You can override the intelligent suggestion if needed';
+                targetWrap.style.display = 'none';
+            }
+
+            
+            // Test type radio button handlers - per Phase 2, Step 4
+            testTypeRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    updateTestTypeHint(this.value);
+                });
+            });
+            
+            function updateTestTypeHint(testType) {
+                const hints = {
+                    'pre_implementation': 
+                        '<strong>Pre-Implementation Test:</strong> Assessing baseline fairness of your original algorithm. ' +
+                        'FDK will intelligently select the appropriate target column for baseline assessment.',
+                    'post_implementation': 
+                        '<strong>Post-Implementation Test:</strong> Evaluating fairness after bias mitigation techniques. ' +
+                        'FDK will intelligently select the corrected target column for comparison.'
+                };
+                
+                hintText.innerHTML = hints[testType] || hints['pre_implementation'];
+                
+                // Update hint box color based on test type - per protocol Phase 2, Step 4
+                if (testType === 'post_implementation') {
+                    testTypeHint.className = 'test-type-hint post';
+                    testTypeHint.querySelector('i').className = 'fas fa-info-circle';
+                } else {
+                    testTypeHint.className = 'test-type-hint';
+                    testTypeHint.querySelector('i').className = 'fas fa-info-circle';
+                }
+                
+                // Update label container active states
+                document.querySelectorAll('.test-type-option').forEach(container => {
+                    container.classList.remove('active');
+                });
+                
+                const activeRadio = document.querySelector(`input[name="test_type"]:checked`);
+                if (activeRadio) {
+                    const activeLabel = activeRadio.closest('.test-type-option');
+                    if (activeLabel) {
+                        activeLabel.classList.add('active');
+                    }
+                }
+            }
+            
+            // ---- Minimal quote-aware CSV row splitter ----
+            function splitCsvRows(text) {
+                const rows = [];
+                let field = '', row = [], inQuotes = false;
+                for (let i = 0; i < text.length; i++) {
+                    const c = text[i];
+                    if (inQuotes) {
+                        if (c === '"') {
+                            if (text[i + 1] === '"') { field += '"'; i++; }
+                            else inQuotes = false;
+                        } else field += c;
+                    } else {
+                        if (c === '"') inQuotes = true;
+                        else if (c === ',') { row.push(field); field = ''; }
+                        else if (c === '\n' || c === '\r') {
+                            if (c === '\r' && text[i + 1] === '\n') i++;
+                            row.push(field); field = '';
+                            rows.push(row); row = [];
+                        } else field += c;
+                    }
+                }
+                if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
+                return rows;
+            }
+
+            // Parses a byte-sliced sample of the file into headers + up to
+            // maxRows data rows. Drops the final row if its field count
+            // doesn't match the header -- a sliced chunk almost always
+            // truncates mid-row, and a partial row would corrupt the
+            // per-column value counts below.
+            function parseSampleRows(text, maxRows) {
+                const allRows = splitCsvRows(text);
+                if (allRows.length === 0) return { headers: [], rows: [] };
+                const headers = allRows[0].map(h => h.trim());
+                let dataRows = allRows.slice(1, 1 + maxRows);
+                if (dataRows.length && dataRows[dataRows.length - 1].length !== headers.length) {
+                    dataRows = dataRows.slice(0, -1);
+                }
+                return { headers, rows: dataRows };
+            }
+
+            // Mirrors the server's strict binary check (issubset({0,1})):
+            // every non-empty sampled value must parse to exactly 0 or 1.
+            function isStrictBinaryColumn(values) {
+                let sawAny = false;
+                for (const raw of values) {
+                    const v = (raw || '').trim();
+                    if (v === '') continue;
+                    sawAny = true;
+                    const n = Number(v);
+                    if (Number.isNaN(n) || (n !== 0 && n !== 1)) return false;
+                }
+                return sawAny;
+            }
+
+            // Samples real data rows (not just the header) and filters to
+            // columns that are plausible targets -- fixes the known gap
+            // where the upload page previously listed every raw column
+            // name unfiltered. Falls back to the full header list (with a
+            // warning) if sampling finds no strict-binary column, so the
+            // dropdown is never left empty.
+            function computeCandidateTargetColumns(text) {
+                const { headers, rows } = parseSampleRows(text, 1000);
+                const candidates = [];
+                for (let col = 0; col < headers.length; col++) {
+                    const values = rows.map(r => r[col] !== undefined ? r[col] : '');
+                    if (isStrictBinaryColumn(values)) candidates.push(headers[col]);
+                }
+                return { headers, candidates };
+            }
+
+            // File input handler with intelligent target detection - per Phase 2, Step 4
+            // Samples real data rows (not just the header line) client-side
+            // so the dropdown is populated with plausible target columns
+            // immediately, regardless of whether the /api/detect-columns
+            // call below succeeds or fails.
+            function populateTargetDropdownFromHeader(file) {
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = function (evt) {
+                        const { headers, candidates } = computeCandidateTargetColumns(evt.target.result);
+                        sampledAllHeaders = headers;
+                        sampledCandidateColumns = candidates;
+
+                        const optionList = candidates.length ? candidates : headers;
+
+                        targetSelect.innerHTML = '';
+                        const targetBlank = document.createElement('option');
+                        targetBlank.value = '';
+                        targetBlank.textContent = '— select a column —';
+                        targetSelect.appendChild(targetBlank);
+                        optionList.forEach(h => {
+                            const opt = document.createElement('option');
+                            opt.value = h;
+                            opt.textContent = h;
+                            targetSelect.appendChild(opt);
+                        });
+                        targetWrap.style.display = 'block';
+
+                        targetHint.textContent = candidates.length
+                            ? 'Showing likely binary target columns only. You can override the intelligent suggestion if needed.'
+                            : 'Could not identify a likely binary column from a sample of this file -- showing all columns.';
+
+                        resolve();
+                    };
+                    reader.readAsText(file.slice(0, 500000)); // sampled rows, not just the header
+                });
+            }
+
+            fileInput.addEventListener('change', async function (e) {
+                if (e.target.files.length === 0) {
+                    fileName.textContent = '';
+                    return;
+                }
+
+                const file = e.target.files[0];
+                fileName.textContent = 'Selected: ' + file.name;
+                fileName.style.color = '#27ae60';
+
+                // Populate both dropdowns from the file's own header row
+                // immediately -- independent of the server call below.
+                await populateTargetDropdownFromHeader(file);
+                
+                // Get selected test type - per protocol
+                const selectedTestType = document.querySelector('input[name="test_type"]:checked').value;
+                
+                // Show loading state - per protocol
+                hintText.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing dataset structure...';
+                
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('test_type', selectedTestType); // UNIFIED: Add test_type parameter
+                    formData.append('domain', 'education');
+                    
+                    // Call enhanced API with test type - per protocol
+                    const res = await fetch('/api/detect-columns', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await res.json();
+                    
+                    if (!res.ok) {
+                        throw new Error(data.error || 'Could not analyze dataset');
+                    }
+                    
+                    // Auto-fill the hidden target column field - per protocol
+                    autoTargetColumn.value = data.suggested_target;
+
+                    // Populate the dropdown for manual override -- filtered
+                    // through the client-side sample (same candidates found
+                    // by computeCandidateTargetColumns above), so the list
+                    // stays consistent regardless of what this endpoint
+                    // itself returns. The server's own suggested_target is
+                    // always included even if sampling missed it.
+                    if (data.columns && Array.isArray(data.columns)) {
+                        let optionList = sampledCandidateColumns.length
+                            ? sampledCandidateColumns.filter(c => data.columns.includes(c))
+                            : data.columns;
+                        if (data.suggested_target && !optionList.includes(data.suggested_target)) {
+                            optionList = [data.suggested_target, ...optionList];
+                        }
+
+                        targetSelect.innerHTML = '';
+                        optionList.forEach(col => {
+                            const opt = document.createElement('option');
+                            opt.value = col;
+                            opt.textContent = col;
+                            if (col === data.suggested_target) opt.selected = true;
+                            targetSelect.appendChild(opt);
+                        });
+                        targetWrap.style.display = 'block';
+                    }<input type="hidden" name="target_column_fallback" id="autoTargetColumn" value="">
+                    
+                    // Show success message with selected column - per protocol
+                    hintText.innerHTML = 
+                        `✅ Intelligent selection complete! ` +
+                        `Target column: <strong>${data.suggested_target}</strong><br>` +
+                        `<small>Based on ${selectedTestType.replace('_', ' ')} test type` +
+                        (data.intelligent_selection ? ' (intelligent selection)' : '') + '</small>';
+                    
+                } catch (err) {
+                    hintText.innerHTML = 
+                        `⚠️ Could not auto-select target: ${err.message}. ` +
+                        `You may need to manually specify columns.`;
+                    autoTargetColumn.value = '';
+
+                    // Still show the dropdown on failure so the user isn't stuck
+                    targetHint.textContent = 'Error: ' + err.message + ' - please manually select the target column';
+                    targetWrap.style.display = 'block';
+                }
+            });
+
+            // Manual dropdown override
+            targetSelect.addEventListener('change', function() {
+                const manualSelection = this.value;
+                autoTargetColumn.value = manualSelection;
+                hintText.innerHTML = `⚠️ Manual override: <strong>${manualSelection}</strong> (overrides intelligent suggestion)`;
+            });
+            
+            // Initialize hint - per protocol
+            updateTestTypeHint('pre_implementation');
+            resetTargetUI();
+            
+            // Initialize label container active states
+            document.querySelectorAll('.test-type-option').forEach(container => {
+                const radio = container.querySelector('input[type="radio"]');
+                container.addEventListener('click', function() {
+                    radio.checked = true;
+                    updateTestTypeHint(radio.value);
+                });
+            });
+            
+            // Form submission handler
+            document.getElementById('educationAuditForm').addEventListener('submit', function(e) {
+                const fileInput = document.getElementById('educationFile');
+                if (!fileInput.files.length) {
+                    e.preventDefault();
+                    showNotification('Please select a CSV file first', 'warning');
+                    return;
+                }
+                
+                // Show loading state
+                const submitBtn = this.querySelector('.submit-btn');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                submitBtn.disabled = true;
+                
+                // Reset button after 5 seconds (in case of error)
+                setTimeout(() => {
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                }, 5000);
+            });
+        });
+        
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+                ${message}
+            `;
+            
+            // Style notification
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#27ae60' : '#00E0FF'};
+                color: white;
+                padding: 15px 20px;
+                border-radius: 10px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+                z-index: 1000;
+                animation: slideIn 0.3s ease;
+                font-weight: 500;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+            
+            // Add CSS animations if not already present
+            if (!document.getElementById('notification-animations')) {
+                const style = document.createElement('style');
+                style.id = 'notification-animations';
+                style.textContent = `
+                    @keyframes slideIn {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                    @keyframes slideOut {
+                        from { transform: translateX(0); opacity: 1; }
+                        to { transform: translateX(100%); opacity: 0; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+        }
+    </script>
+</body>
+</html>
