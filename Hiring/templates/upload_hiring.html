@@ -769,8 +769,10 @@
                                 </span>
                             </div>
                             
-                            <!-- HIDDEN TARGET COLUMN FIELD (auto-filled by intelligent system) -->
-                            <input type="hidden" name="target_column" id="autoTargetColumn" value="">
+                            <div class="target-column-wrapper" id="targetColumnWrapper" style="display:none; margin-top:12px;">
+                                <label for="autoTargetColumn"><strong>Target Column</strong> (auto-selected — change if needed)</label>
+                                <select name="target_column" id="autoTargetColumn"></select>
+                            </div>
                         </div>
 
                         <div class="file-input-wrapper">
@@ -852,7 +854,7 @@
             <div class="footer-tile">
                 <div class="footer-tile-icon" aria-hidden="true"><i class="fas fa-wand-magic-sparkles"></i></div>
                 <div class="footer-tile-title">Intelligent Column Detection</div>
-                <div class="footer-tile-text">FDK automatically identifies the appropriate target column from your dataset based on the selected test type — no manual configuration required.</div>
+                <div class="footer-tile-text">FDK automatically identifies the appropriate target column from your dataset based on the selected test type, and lets you review or adjust the selection on the next page before running the audit.</div>
             </div>
             <div class="footer-tile">
                 <div class="footer-tile-icon" aria-hidden="true"><i class="fas fa-users"></i></div>
@@ -932,6 +934,33 @@
                 }
             }
             
+            // Reads just the header row of the chosen file client-side, so the
+            // target-column dropdown can be populated immediately without
+            // depending on what the server's detect-columns response returns.
+            function populateTargetColumnOptions(file) {
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = function (evt) {
+                        const firstLine = evt.target.result.split(/\r?\n/)[0] || '';
+                        const headers = firstLine.split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+                        autoTargetColumn.innerHTML = '';
+                        const blankOpt = document.createElement('option');
+                        blankOpt.value = '';
+                        blankOpt.textContent = '— auto-detect —';
+                        autoTargetColumn.appendChild(blankOpt);
+                        headers.forEach(h => {
+                            const opt = document.createElement('option');
+                            opt.value = h;
+                            opt.textContent = h;
+                            autoTargetColumn.appendChild(opt);
+                        });
+                        targetColumnWrapper.style.display = 'block';
+                        resolve();
+                    };
+                    reader.readAsText(file.slice(0, 65536)); // header row only
+                });
+            }
+
             // File input handler with intelligent target detection (FIXED VERSION)
             fileInput.addEventListener('change', async function (e) {
                 if (e.target.files.length === 0) {
@@ -942,6 +971,10 @@
                 const file = e.target.files[0];
                 fileName.textContent = 'Selected: ' + file.name;
                 fileName.style.color = '#27ae60';
+
+                // Populate the target-column dropdown from the file's own header
+                // row immediately, independent of the server call below.
+                await populateTargetColumnOptions(file);
                 
                 // Get selected test type
                 const selectedTestType = document.querySelector('input[name="test_type"]:checked').value;
