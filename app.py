@@ -112,11 +112,7 @@ def general_intelligent_selection(df, test_type):
                 if pattern in col_lower and is_binary_column(df[col]):
                     return col
 
-        binary_col = find_first_binary_column(columns, df)
-        if binary_col:
-            return binary_col
-
-    return columns[-1] if columns else None
+    return None
 
 def intelligent_target_selection(df, test_type, domain_hint=None):
     """Intelligently select target column based on test type and domain"""
@@ -127,45 +123,54 @@ def intelligent_target_selection(df, test_type, domain_hint=None):
         'justice': {
             'pre_implementation': ['two_year_recid', 'is_recid', 'recidivism'],
             'post_implementation': ['two_year_recid', 'is_recid', 'recidivism'],
-            'fallback': lambda cols: find_first_binary_column(cols, df)
+            'fallback': lambda cols: None  # no semantic match -- let caller's own detection take over
         },
         'health': {
             'pre_implementation': ['mortality', 'readmission', 'complication'],
             'post_implementation': ['mortality', 'readmission', 'complication'],
-            'fallback': lambda cols: find_first_binary_column(cols, df)
+            'fallback': lambda cols: None  # no semantic match -- let caller's own detection take over
         },
         'education': {
             'pre_implementation': ['admission', 'dropout', 'graduation'],
             'post_implementation': ['admission', 'dropout', 'graduation'],
-            'fallback': lambda cols: find_first_binary_column(cols, df)
+            'fallback': lambda cols: None  # no semantic match -- let caller's own detection take over
         },
         'hiring': {
             'pre_implementation': ['hired', 'selected', 'offer_accepted', 'callback'],
             'post_implementation': ['hired', 'selected', 'offer_accepted', 'callback'],
-            'fallback': lambda cols: find_first_binary_column(cols, df)
+            'fallback': lambda cols: None  # no semantic match -- let caller's own detection take over
         },
         'finance': {
             'pre_implementation': ['default', 'approved', 'loan_status', 'creditrisk', 'credit_risk'],
             'post_implementation': ['default', 'approved', 'loan_status', 'creditrisk', 'credit_risk'],
-            'fallback': lambda cols: find_first_binary_column(cols, df)
+            'fallback': lambda cols: None  # no semantic match -- let caller's own detection take over
         },
         'business': {
             'pre_implementation': ['churn', 'conversion', 'purchase'],
             'post_implementation': ['churn', 'conversion', 'purchase'],
-            'fallback': lambda cols: find_first_binary_column(cols, df)
+            'fallback': lambda cols: None  # no semantic match -- let caller's own detection take over
         },
         'governance': {
             'pre_implementation': ['approved', 'granted', 'permitted'],
             'post_implementation': ['approved', 'granted', 'permitted'],
-            'fallback': lambda cols: find_first_binary_column(cols, df)
+            'fallback': lambda cols: None  # no semantic match -- let caller's own detection take over
         }
     }
 
     if domain in domain_rules:
         priority_list = domain_rules[domain].get(test_type, [])
+        # Column names containing these terms are predictions/recommendations,
+        # never genuine ground truth -- exclude them even when they also
+        # match a domain keyword (e.g. "predicted_recidivism" contains
+        # "recidivism" but is a model output, not the real outcome).
+        prediction_indicator_terms = ['predicted', 'prediction', 'recommend', 'recommended',
+                                       'forecast', 'estimate', 'model_output', 'model_score']
         for col_pattern in priority_list:
             for actual_col in columns:
-                if col_pattern.lower() in actual_col.lower():
+                col_lower = actual_col.lower()
+                if col_pattern.lower() in col_lower:
+                    if any(term in col_lower for term in prediction_indicator_terms):
+                        continue
                     if test_type in ['pre_implementation', 'post_implementation']:
                         if is_binary_column(df[actual_col]):
                             return actual_col
