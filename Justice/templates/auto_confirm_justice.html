@@ -518,50 +518,72 @@
             </div>
 
             <div class="mapping-section">
-                <h3><i class="fas fa-map-marked-alt"></i> Detected Justice Column Mapping:</h3>
-                <p>Your justice fairness audit will be based on these automatically selected features from <strong>{{ filename }}</strong>:</p>
+                <h3><i class="fas fa-map-marked-alt"></i> Justice Column Mapping:</h3>
+                <p>FDK auto-selected these features from <strong>{{ filename }}</strong>. Review and adjust any of them below before running the audit — this dropdown only lists columns that are statistically valid for each role.</p>
 
                 <div class="mapping-item">
-                    <strong>{{ suggested_mappings.group }}</strong>
-                    <div class="reasoning">→ Defendant Groups for Fairness Analysis</div>
-                    <div class="reasoning"><em>{{ column_reasoning[suggested_mappings.group] }}</em></div>
+                    <label for="group_col_select"><strong>Defendant Groups for Fairness Analysis</strong></label>
+                    <select name="group_col" id="group_col_select" form="justiceAuditRunForm">
+                        {% for opt in column_options.group %}
+                        <option value="{{ opt.column }}" {% if opt.selected %}selected{% endif %}>{{ opt.description }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="reasoning"><em>{{ column_reasoning.get(suggested_mappings.group, '') }}</em></div>
                 </div>
 
                 <div class="mapping-item">
-                    <strong>{{ suggested_mappings.y_true }}</strong>
-                    <div class="reasoning">→ Justice Outcomes & Legal Decisions</div>
-                    <div class="reasoning"><em>{{ column_reasoning[suggested_mappings.y_true] }}</em></div>
+                    <label for="y_true_col_select"><strong>Justice Outcomes & Legal Decisions</strong></label>
+                    {% if column_options.y_true %}
+                    <select name="y_true_col" id="y_true_col_select" form="justiceAuditRunForm">
+                        {% for opt in column_options.y_true %}
+                        <option value="{{ opt.column }}" {% if opt.selected %}selected{% endif %}>{{ opt.description }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="reasoning"><em>{{ column_reasoning.get(suggested_mappings.y_true, '') }}</em></div>
+                    {% else %}
+                    <div class="reasoning" style="color:#b45309;"><i class="fas fa-triangle-exclamation"></i> No binary outcome column detected. This dataset needs a binary (0/1) outcome column before an audit can run.</div>
+                    {% endif %}
                 </div>
 
                 <div class="mapping-item">
-                    <strong>{{ suggested_mappings.y_pred }}</strong>
-                    <div class="reasoning">→ Risk Assessments & Algorithm Predictions</div>
-                    <div class="reasoning"><em>{{ column_reasoning[suggested_mappings.y_pred] }}</em></div>
+                    <label for="y_pred_col_select"><strong>Risk Assessments & Algorithm Predictions</strong></label>
+                    {% if column_options.y_pred %}
+                    <select name="y_pred_col" id="y_pred_col_select" form="justiceAuditRunForm">
+                        {% for opt in column_options.y_pred %}
+                        <option value="{{ opt.column }}" {% if opt.selected %}selected{% endif %}>{{ opt.description }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="reasoning"><em>{{ column_reasoning.get(suggested_mappings.y_pred, '') }}</em></div>
+                    {% else %}
+                    <div class="reasoning" style="color:#b45309;"><i class="fas fa-triangle-exclamation"></i> No binary prediction column detected. This dataset needs a binary (0/1) prediction column before an audit can run.</div>
+                    {% endif %}
                 </div>
 
-                {% if suggested_mappings.y_prob %}
                 <div class="mapping-item">
-                    <strong>{{ suggested_mappings.y_prob }}</strong>
-                    <div class="reasoning">→ Confidence Scores & Probability Values</div>
-                    <div class="reasoning"><em>{{ column_reasoning[suggested_mappings.y_prob] }}</em></div>
+                    <label for="y_prob_col_select"><strong>Confidence Scores & Probability Values (optional)</strong></label>
+                    <select name="y_prob_col" id="y_prob_col_select" form="justiceAuditRunForm">
+                        <option value="">— none —</option>
+                        {% for opt in column_options.y_prob %}
+                        <option value="{{ opt.column }}" {% if opt.selected %}selected{% endif %}>{{ opt.description }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if suggested_mappings.y_prob %}
+                    <div class="reasoning"><em>{{ column_reasoning.get(suggested_mappings.y_prob, '') }}</em></div>
+                    {% endif %}
                 </div>
-                {% endif %}
             </div>
 
             <div class="run-audit-section">
                 <h2><i class="fas fa-rocket"></i> Run Justice Fairness Audit on {{ filename }}</h2>
-                <p>36 justice fairness metrics will be analyzed using the detected column mapping from your uploaded dataset</p>
+                <p>36 justice fairness metrics will be analyzed using the column mapping selected above</p>
                 <p><em>Justice Domain Coverage • Legal Fairness Standards • Automated Detection</em></p>
+                {% if not column_options.y_true or not column_options.y_pred %}
+                <p style="color:#b45309;"><i class="fas fa-triangle-exclamation"></i> This dataset doesn't yet have a binary outcome and/or prediction column, so the audit can't run until one is added.</p>
+                {% endif %}
 
-                <form action="{{ url_for('justice.run_justice_audit_with_mapping') }}" method="get">
+                <form action="{{ url_for('justice.run_justice_audit_with_mapping') }}" method="get" id="justiceAuditRunForm">
                     <input type="hidden" name="filename" value="{{ filename }}">
-                    <input type="hidden" name="group_col" value="{{ suggested_mappings.group }}">
-                    <input type="hidden" name="y_true_col" value="{{ suggested_mappings.y_true }}">
-                    <input type="hidden" name="y_pred_col" value="{{ suggested_mappings.y_pred }}">
-                    {% if suggested_mappings.y_prob %}
-                    <input type="hidden" name="y_prob_col" value="{{ suggested_mappings.y_prob }}">
-                    {% endif %}
-                    <button type="submit" class="run-btn">
+                    <button type="submit" class="run-btn" {% if not column_options.y_true or not column_options.y_pred %}disabled{% endif %}>
                         <i class="fas fa-play-circle"></i> RUN JUSTICE FAIRNESS AUDIT
                     </button>
                 </form>
@@ -578,7 +600,7 @@
             <div class="footer-tile">
                 <div class="footer-tile-icon" aria-hidden="true"><i class="fas fa-wand-magic-sparkles"></i></div>
                 <div class="footer-tile-title">Intelligent Column Detection</div>
-                <div class="footer-tile-text">FDK automatically identifies the appropriate target column from your dataset based on the selected test type — no manual configuration required.</div>
+                <div class="footer-tile-text">FDK automatically identifies the appropriate target column from your dataset based on the selected test type, and lets you review or adjust the selection before running the audit.</div>
             </div>
             <div class="footer-tile">
                 <div class="footer-tile-icon" aria-hidden="true"><i class="fas fa-scale-balanced"></i></div>
