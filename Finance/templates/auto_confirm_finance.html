@@ -540,12 +540,16 @@
 
                     <div class="mapping-item">
                         <label for="y_pred_col"><strong>Model's Decision</strong> — what the algorithm predicted or decided (must be a different column from the actual outcome above)</label>
+                        {% if column_options.y_pred %}
                         <select name="y_pred_col" id="y_pred_col">
                             {% for col, desc in column_options.y_pred %}
                             <option value="{{ col }}" {% if col == suggested_mappings.y_pred %}selected{% endif %}>{{ desc }}</option>
                             {% endfor %}
                         </select>
                         <div class="reasoning"><em>Our best guess: {{ suggested_mappings.y_pred }} — {{ column_reasoning[suggested_mappings.y_pred] }}</em></div>
+                        {% else %}
+                        <div class="reasoning" style="color:#b23b2e;"><i class="fas fa-triangle-exclamation"></i> No separate model-decision column was found in your dataset. This audit will compare the actual outcome to itself unless you add a genuine prediction column and re-upload — it cannot detect model bias without one.</div>
+                        {% endif %}
                         <div class="reasoning">In finance datasets, this is often called <code>predicted</code>, <code>risk_score</code>, or <code>model_decision</code>.</div>
                     </div>
 
