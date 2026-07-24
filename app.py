@@ -69,7 +69,7 @@ def detect_domain_from_columns(columns):
     """Auto-detect which of 7 FDK domains based on column name patterns"""
     domain_patterns = {
         'justice': ['recid', 'bail', 'sentenc', 'parole', 'defendant'],
-        'health': ['mortality', 'readmission', 'complication', 'patient', 'diagnos'],
+        'health': ['mortality', 'readmission', 'readmit', 'complication', 'patient', 'diagnos'],
         'education': ['admission', 'dropout', 'graduation', 'student'],
         'hiring': ['hired', 'selected', 'offer_accepted', 'callback', 'applicant'],
         'finance': ['default', 'approved', 'loan_status', 'creditrisk', 'credit_risk', 'loan'],
@@ -126,8 +126,8 @@ def intelligent_target_selection(df, test_type, domain_hint=None):
             'fallback': lambda cols: None  # no semantic match -- let caller's own detection take over
         },
         'health': {
-            'pre_implementation': ['mortality', 'readmission', 'complication'],
-            'post_implementation': ['mortality', 'readmission', 'complication'],
+            'pre_implementation': ['mortality', 'readmission', 'readmit', 'complication'],
+            'post_implementation': ['mortality', 'readmission', 'readmit', 'complication'],
             'fallback': lambda cols: None  # no semantic match -- let caller's own detection take over
         },
         'education': {
