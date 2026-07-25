@@ -146,13 +146,13 @@ def intelligent_target_selection(df, test_type, domain_hint=None):
             'fallback': lambda cols: None  # no semantic match -- let caller's own detection take over
         },
         'business': {
-            'pre_implementation': ['churn', 'conversion', 'purchase'],
-            'post_implementation': ['churn', 'conversion', 'purchase'],
+            'pre_implementation': ['churn', 'conversion', 'purchase', 'subscribed'],
+            'post_implementation': ['churn', 'conversion', 'purchase', 'subscribed'],
             'fallback': lambda cols: None  # no semantic match -- let caller's own detection take over
         },
         'governance': {
-            'pre_implementation': ['approved', 'granted', 'permitted'],
-            'post_implementation': ['approved', 'granted', 'permitted'],
+            'pre_implementation': ['approved', 'granted', 'permitted', 'pubcov'],
+            'post_implementation': ['approved', 'granted', 'permitted', 'pubcov'],
             'fallback': lambda cols: None  # no semantic match -- let caller's own detection take over
         }
     }
