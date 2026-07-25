@@ -123,13 +123,21 @@ class GovernanceFairnessPipeline:
         return float(min(subgroup_performance)) if subgroup_performance else 0.0
 
     def calculate_composite_bias_score(self, metrics: Dict) -> float:
-        """Calculate overall composite bias score (0-1, higher = more bias)"""
+        """
+        Calculate overall composite bias score (0-1, higher = more bias).
+
+        Reflects pure cross-group disparity only. worst_case_subgroup_performance
+        (the absolute performance of whichever single group scores worst) was
+        removed from this formula -- it measures whether the model is accurate,
+        not whether it is unfair, and could inflate this score for a model that
+        is uniformly mediocre across every group with zero actual disparity
+        between them.
+        """
         critical_metrics = [
             metrics.get('statistical_parity_difference', 0),
             metrics.get('equal_opportunity_difference', 0),
             metrics.get('average_odds_difference', 0),
             metrics.get('disparate_impact_ratio', 1),
-            metrics.get('worst_case_subgroup_performance', 0)
         ]
         
         # Normalize and weight metrics
@@ -143,11 +151,12 @@ class GovernanceFairnessPipeline:
         # For ratio metrics (lower = more bias)
         normalized_scores.append(max(0, 1 - (critical_metrics[3] / 0.8)))  # Normalize to 0-1, threshold at 0.8
         
-        # For performance metrics (lower = more bias)
-        normalized_scores.append(max(0, 1 - critical_metrics[4]))  # Already 0-1
-        
-        # Weighted average (emphasizing core fairness)
-        weights = [0.25, 0.25, 0.20, 0.15, 0.15]
+        # Weighted average (emphasizing core fairness). Original weights were
+        # [0.25, 0.25, 0.20, 0.15, 0.15]; the 0.15 previously assigned to
+        # worst_case_subgroup_performance is redistributed proportionally
+        # across the remaining four, which is why these no longer sum to a
+        # round number on their own but still sum to 1.0 together.
+        weights = [0.25 / 0.85, 0.25 / 0.85, 0.20 / 0.85, 0.15 / 0.85]
         composite_score = sum(score * weight for score, weight in zip(normalized_scores, weights))
         
         return float(composite_score)
@@ -198,6 +207,23 @@ class GovernanceFairnessPipeline:
                     except:
                         issues.append(f"Column '{col}' cannot be converted to numeric")
         
+        # Independent last-line-of-defense check: y_true and y_pred must be
+        # genuinely binary {0,1}, regardless of what the upstream column-mapping
+        # step decided. Deliberately redundant with the detection-time checks in
+        # fdk_governance.py (the _is_binary_column helper), so a single bad
+        # mapping upstream can't silently corrupt every downstream metric. The
+        # numeric-dtype check above would let a column with 3+ distinct values,
+        # or a {1,2}-style column, through undetected.
+        for col in ['y_true', 'y_pred']:
+            if col in df.columns:
+                col_vals = set(df[col].dropna().unique())
+                if not col_vals.issubset({0, 1}):
+                    issues.append(
+                        f"Column '{col}' is not binary (found values: "
+                        f"{sorted(col_vals)[:10]}{'...' if len(col_vals) > 10 else ''}). "
+                        f"Fairness metrics require a genuine binary outcome/prediction column."
+                    )
+
         # Check group diversity
         if 'group' in df.columns:
             groups = df['group'].nunique()
@@ -773,25 +799,61 @@ class GovernanceFairnessPipeline:
         except Exception as e:
             raise ValueError(f"Explainability accountability calculation failed: {str(e)}")
 
-    def assess_governance_fairness(self, metrics: Dict[str, Any]) -> str:
-        """Assess overall fairness for governance domain using CGFI"""
-        cgfi = metrics.get('composite_governance_fairness_index', 0.0)
-        
-        if cgfi >= 0.8:
-            return "EXCELLENT - High fairness, accuracy, and transparency"
-        elif cgfi >= 0.7:
-            return "GOOD - Generally fair with minor improvements needed"
-        elif cgfi >= 0.6:
-            return "FAIR - Moderate fairness concerns detected"
-        elif cgfi >= 0.5:
-            return "POOR - Significant fairness issues requiring attention"
+    def assess_governance_fairness(self, composite_bias_score: float) -> str:
+        """
+        Assess overall fairness for governance domain using composite_bias_score,
+        matching the LOW_BIAS/MEDIUM_BIAS/HIGH_BIAS convention already used
+        consistently across Finance, Health, Hiring, and Business -- not CGFI,
+        which mixes in raw model accuracy (30%) and a transparency measure (20%)
+        alongside actual fairness metrics (40%), and can land in a reassuring
+        range even when critical_issues has fired on every check.
+        """
+        if composite_bias_score >= 0.12:
+            return "HIGH_BIAS - Significant policy equity concerns requiring urgent review"
+        elif composite_bias_score >= 0.05:
+            return "MEDIUM_BIAS - Moderate policy equity concerns requiring review"
         else:
-            return "UNACCEPTABLE - Critical fairness violations detected"
+            return "LOW_BIAS - Generally fair across constituent groups"
 
     def run_pipeline(self, df: pd.DataFrame, save_to_disk: bool = False) -> Dict[str, Any]:
         """Main governance pipeline execution"""
         
         try:
+            # Soft-exclusion policy for small subgroups: a single small-but-real
+            # demographic group should not block analysis of an otherwise
+            # well-powered dataset. Groups below 20 samples are excluded from
+            # the analysis (with the exclusion recorded transparently below),
+            # rather than causing the entire audit to be rejected. A hard
+            # failure is retained only for the genuinely degenerate case of
+            # fewer than two groups remaining after exclusion.
+            excluded_groups = {}
+            if 'group' in df.columns:
+                group_counts = df['group'].value_counts()
+                small_groups = group_counts[group_counts < 20]
+                if len(small_groups) > 0:
+                    excluded_groups = small_groups.to_dict()
+                    df = df[~df['group'].isin(small_groups.index)].copy()
+
+            if 'group' in df.columns and df['group'].nunique() < 2:
+                error_results = {
+                    "domain": "governance",
+                    "metrics_calculated": 0,
+                    "error": f"Fewer than 2 groups remain with adequate sample size after excluding: {excluded_groups}",
+                    "validation": {
+                        "sample_size": len(df),
+                        "groups_analyzed": len(df['group'].unique()) if 'group' in df.columns else 0,
+                        "statistical_power": "inadequate",
+                        "excluded_groups": excluded_groups
+                    },
+                    "summary": {
+                        "composite_governance_fairness_index": 0.0,
+                        "composite_bias_score": 0.0,
+                        "overall_assessment": "ERROR - Data validation failed"
+                    },
+                    "timestamp": str(pd.Timestamp.now())
+                }
+                return self.convert_numpy_types(error_results)
+
             # Comprehensive validation
             is_valid, issues = self.validate_dataframe(df)
             if not is_valid:
@@ -802,7 +864,8 @@ class GovernanceFairnessPipeline:
                     "validation": {
                         "sample_size": len(df),
                         "groups_analyzed": len(df['group'].unique()) if 'group' in df.columns else 0,
-                        "statistical_power": "inadequate" if len(df) < 30 else "adequate"
+                        "statistical_power": "inadequate" if len(df) < 30 else "adequate",
+                        "excluded_groups": excluded_groups
                     },
                     "summary": {
                         "composite_governance_fairness_index": 0.0,
@@ -843,18 +906,22 @@ class GovernanceFairnessPipeline:
             # Build comprehensive results
             results = {
                 "domain": "governance",
-                "metrics_calculated": 27,
+                "metrics_calculated": len([
+                    k for k in governance_metrics.keys()
+                    if k in {name for category in self.config.values() for name in category}
+                ]),
                 "metric_categories": self.config,
                 "fairness_metrics": governance_metrics,
                 "validation": {
                     "sample_size": len(df),
                     "groups_analyzed": len(df['group'].unique()),
-                    "statistical_power": "adequate" if len(df) >= 30 else "limited"
+                    "statistical_power": "adequate" if len(df) >= 30 else "limited",
+                    "excluded_groups": excluded_groups
                 },
                 "summary": {
                     "composite_governance_fairness_index": governance_metrics.get('composite_governance_fairness_index', 0.0),
                     "composite_bias_score": composite_bias_score,
-                    "overall_assessment": self.assess_governance_fairness(governance_metrics),
+                    "overall_assessment": self.assess_governance_fairness(composite_bias_score),
                     "critical_issues": critical_issues
                 },
                 "timestamp": str(pd.Timestamp.now())
