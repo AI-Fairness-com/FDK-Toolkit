@@ -3,6 +3,7 @@
 # ================================================================
 
 import os
+import re
 import json
 import pandas as pd
 import numpy as np
@@ -166,9 +167,15 @@ def detect_business_column_mappings(df, columns, test_type='pre_implementation',
 
         # TIMESTAMP detection (optional — enables temporal fairness metrics)
         if not suggestions['timestamp']:
-            if any(keyword in col_lower for keyword in ['timestamp', 'date', 'decision_date', 'time', 'datetime']):
+            timestamp_keywords = ['timestamp', 'date', 'decision_date', 'time', 'datetime']
+            col_tokens = set(re.split(r'[^a-z0-9]+', col_lower))
+            keyword_matched = any(set(kw.split('_')).issubset(col_tokens) for kw in timestamp_keywords)
+            if keyword_matched:
                 try:
-                    pd.to_datetime(df[col], errors='raise')
+                    parsed = pd.to_datetime(df[col], errors='raise')
+                    non_null = parsed.dropna()
+                    if non_null.empty or non_null.dt.year.min() < 1971:
+                        raise ValueError("degenerate epoch-adjacent parse")
                     suggestions['timestamp'] = col
                     reasoning[col] = "Detected as a parseable date/time column for temporal fairness metrics"
                     continue
@@ -185,23 +192,23 @@ def detect_business_column_mappings(df, columns, test_type='pre_implementation',
         
         # GROUP fallback: Categorical columns
         if not suggestions['group']:
-            if col_data.dtype == 'object' or (col_data.nunique() <= 20 and col_data.nunique() > 1):
+            if 1 < col_data.nunique() <= 20:
                 suggestions['group'] = col
                 reasoning[col] = "Statistical fallback: Customer segments (2-20 unique values)"
                 continue
                 
-        # Y_TRUE fallback: Binary columns
+        # Y_TRUE fallback: genuinely binary columns only
         if not suggestions['y_true']:
-            if col_data.dtype in ['int64', 'float64'] and len(unique_vals) == 2:
+            if col_data.dtype in ['int64', 'float64'] and _is_binary_column(col_data):
                 if col != suggestions['y_pred']:
                     suggestions['y_true'] = col
                     reasoning[col] = "Statistical fallback: Binary outcomes (2 unique values)"
                     continue
                     
-        # Y_PRED fallback: Binary columns (different from y_true)
+        # Y_PRED fallback: genuinely binary columns only (different from y_true)
         if not suggestions['y_pred']:
             if (col != suggestions['y_true'] and col_data.dtype in ['int64', 'float64'] 
-                and len(unique_vals) == 2):
+                and _is_binary_column(col_data)):
                 suggestions['y_pred'] = col
                 reasoning[col] = "Statistical fallback: Binary predictions (2 unique values)"
                 continue
@@ -216,6 +223,118 @@ def detect_business_column_mappings(df, columns, test_type='pre_implementation',
     
     # Final validation and return
     return suggestions, reasoning, intelligent_suggestion
+
+# ================================================================
+# No-Code Dropdown Support (ported from Finance/Health/Hiring reference
+# implementation) -- powers the confirmation-page manual-override UX.
+# Business's own binary convention is strict {0,1} only, matching the
+# existing _is_binary_column helper used elsewhere in this file.
+# ================================================================
+
+def _describe_column(df, col, role=None):
+    """
+    Plain-language, jargon-free description of a candidate column, for
+    display next to each dropdown option on the confirmation page.
+    `role` matters: for group/target/prediction, "every value is unique"
+    means "this is an ID column, not usable." For probability, every
+    value being distinct is completely normal.
+    """
+    series = df[col]
+    n_unique = series.nunique()
+    n_total = len(series)
+
+    if role == 'y_prob':
+        vmin, vmax = series.min(), series.max()
+        return f"{col} — continuous values ranging {vmin:.3f} to {vmax:.3f}"
+
+    if n_unique == n_total:
+        return f"{col} — every value is unique (likely an ID column, not usable here)"
+
+    if series.dtype == object or n_unique <= 10:
+        top_vals = series.dropna().unique()[:5]
+        vals_str = ", ".join(str(v) for v in top_vals)
+        return f"{col} — {n_unique} categories ({vals_str}{', ...' if n_unique > 5 else ''})"
+
+    return f"{col} — {n_unique} distinct numeric values"
+
+
+def _candidate_columns(df, role, exclude=None):
+    """
+    Filters a dataset's columns down to the ones that are statistically
+    plausible for a given role.
+
+    - group: low-cardinality (2-10 unique values), not a pure identifier
+    - y_true / y_pred: genuinely binary, strict {0,1} only (via the same
+      _is_binary_column convention used elsewhere in this file)
+    - y_prob: continuous float column in the 0-1 range. Deliberately does
+      NOT apply the identifier-exclusion check -- a real probability
+      column naturally has every value unique.
+    """
+    exclude = exclude or set()
+    candidates = []
+    for col in df.columns:
+        if col in exclude:
+            continue
+        series = df[col]
+        n_unique = series.nunique()
+        n_total = len(series)
+        is_identifier = (n_unique == n_total)
+
+        if role == 'group':
+            if is_identifier:
+                continue
+            if 1 < n_unique <= 20:
+                candidates.append(col)
+
+        elif role in ('y_true', 'y_pred'):
+            if is_identifier:
+                continue
+            if series.dtype in ['int64', 'float64', 'bool'] and _is_binary_column(series):
+                candidates.append(col)
+
+        elif role == 'y_prob':
+            if series.dtype in ['float64', 'float32'] and n_unique > 2:
+                try:
+                    if series.dropna().between(0, 1).all():
+                        candidates.append(col)
+                except Exception:
+                    continue
+
+    return candidates
+
+
+def build_column_options(df, suggested_mappings):
+    """
+    Assembles the four per-role candidate lists for the confirmation
+    page, each excluding whatever's already suggested for a different
+    role, with a plain-language description attached to every option.
+
+    Returns: {role: [{"column": name, "description": str, "selected": bool}, ...]}
+    """
+    roles = ['group', 'y_true', 'y_pred', 'y_prob']
+    options = {}
+
+    for role in roles:
+        already_used_elsewhere = {
+            v for r, v in suggested_mappings.items()
+            if r in roles and r != role and v
+        }
+        candidates = _candidate_columns(df, role, exclude=already_used_elsewhere)
+
+        suggested = suggested_mappings.get(role)
+        if suggested and suggested not in candidates and suggested in df.columns:
+            candidates = [suggested] + candidates
+
+        options[role] = [
+            {
+                "column": col,
+                "description": _describe_column(df, col, role=role),
+                "selected": (col == suggested),
+            }
+            for col in candidates
+        ]
+
+    return options
 
 # ------------------------------------------------
 # Business-Specific Human Summary
@@ -443,6 +562,15 @@ def start_business_audit_process():
             df, columns, test_type=test_type, user_target=user_selected_target
         )
         
+        # Sanitization: null out any suggested mapping that isn't actually in
+        # its own role's valid-candidate list, rather than trusting the
+        # detection heuristics blindly. Same fix pattern as Finance/Health/Hiring.
+        for role in ['group', 'y_true', 'y_pred', 'y_prob']:
+            candidate_list = _candidate_columns(df, role)
+            if suggested_mappings.get(role) and suggested_mappings[role] not in candidate_list:
+                print(f"⚠️ Sanitizing invalid '{role}' suggestion: {suggested_mappings[role]} is not a valid candidate for this role")
+                suggested_mappings[role] = None
+        
         required_mappings = ['group', 'y_true', 'y_pred']
         missing_required = [m for m in required_mappings if m not in suggested_mappings or not suggested_mappings[m]]
         
@@ -461,12 +589,17 @@ def start_business_audit_process():
         session['intelligent_suggestion'] = intelligent_suggestion
         
         # Count actual key features detected
-        detected_key_features = len([m for m in suggested_mappings.values() if m is not None])
+        detected_key_features = len([k for k in ('group', 'y_true', 'y_pred', 'y_prob') if suggested_mappings.get(k) is not None])
+
+        # Build the filtered, role-appropriate dropdown options for the
+        # confirmation page's manual-override UX.
+        column_options = build_column_options(df, suggested_mappings)
         
         return render_template(
             'auto_confirm_business.html',
             suggested_mappings=suggested_mappings,
             column_reasoning=column_reasoning,
+            column_options=column_options,
             total_columns=len(columns),
             detected_key_features=detected_key_features,
             filename=file.filename,
@@ -490,6 +623,24 @@ def run_business_audit_with_mapping():
     
     try:
         df = pd.read_csv(dataset_path)
+
+        # Apply any manual overrides submitted from the confirmation page's
+        # dropdowns. Each override is re-validated against its role's own
+        # candidate list before being accepted.
+        override_params = {
+            'group': request.args.get('group_col'),
+            'y_true': request.args.get('y_true_col'),
+            'y_pred': request.args.get('y_pred_col'),
+            'y_prob': request.args.get('y_prob_col'),
+        }
+        for role, override_value in override_params.items():
+            if not override_value:
+                continue
+            valid_candidates = _candidate_columns(df, role)
+            if override_value in valid_candidates:
+                column_mapping[role] = override_value
+            else:
+                print(f"⚠️ Ignoring invalid '{role}' override from request: {override_value}")
         
         required_mappings = ['group', 'y_true', 'y_pred']
         missing_required = [m for m in required_mappings if m not in column_mapping or not column_mapping[m]]
@@ -572,7 +723,7 @@ def run_business_audit_with_mapping():
         return render_template(
             "result_business.html",
             title="Business Services Fairness Audit Completed",
-            message="Your business dataset was audited successfully using 36 fairness metrics.",
+            message="Your business dataset was audited successfully using 60 fairness metrics.",
             summary=summary_text,
             report_filename=session['report_filename']
         )

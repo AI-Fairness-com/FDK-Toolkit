@@ -122,6 +122,23 @@ def validate_dataframe_before_pipeline(df, required_cols=['group', 'y_true', 'y_
     for col in ['y_true', 'y_pred']:
         if col in df.columns and df[col].dtype == 'object':
             raise ValueError(f"{col} should be numeric but is object")
+
+    # Independent last-line-of-defense check: y_true and y_pred must be
+    # genuinely binary {0,1}, regardless of what the upstream column-mapping
+    # step decided. Deliberately redundant with the detection-time checks in
+    # fdk_business.py (the _is_binary_column helper), so a single bad mapping
+    # upstream can't silently corrupt every downstream metric. A non-object
+    # numeric column with 3+ distinct values, or a {1,2}-style column, would
+    # otherwise pass the check above undetected.
+    for col in ['y_true', 'y_pred']:
+        if col in df.columns:
+            col_vals = set(df[col].dropna().unique())
+            if not col_vals.issubset({0, 1}):
+                raise ValueError(
+                    f"Column mapped to '{col}' is not binary (found values: "
+                    f"{sorted(col_vals)[:10]}{'...' if len(col_vals) > 10 else ''}). "
+                    f"Fairness metrics require a genuine binary outcome/prediction column."
+                )
     
     # Group diversity check
     if 'group' in df.columns and df['group'].nunique() < 2:
@@ -403,10 +420,14 @@ def calculate_predictive_causal_reliability(df: pd.DataFrame) -> Dict[str, Any]:
     metrics = {}
     
     try:
-        if 'y_prob' not in df.columns:
-            # Create synthetic probabilities for demonstration
-            df['y_prob'] = df['y_pred'] * 0.8 + np.random.random(len(df)) * 0.2
-            
+        # Genuine probability data only -- never fabricate a y_prob column.
+        # Calibration and AUC metrics require real predicted-probability scores;
+        # presenting numbers computed from synthetic random noise as if they
+        # were real calibration/AUC measurements would be actively misleading
+        # for a fairness-audit tool. When no real y_prob exists, these metrics
+        # are honestly reported as None (not computed) instead.
+        has_real_y_prob = 'y_prob' in df.columns
+
         groups = df['group'].unique()
         calibration_data = {}
         auc_scores = {}
@@ -416,25 +437,23 @@ def calculate_predictive_causal_reliability(df: pd.DataFrame) -> Dict[str, Any]:
         for group in groups:
             group_data = df[df['group'] == group]
             
-            # Calibration by group (simplified)
-            if len(group_data) > 5:
+            # Calibration by group (simplified) -- requires genuine probability scores
+            if has_real_y_prob and len(group_data) > 5:
                 prob_bins = pd.cut(group_data['y_prob'], bins=5, labels=False)
                 calibration_means = group_data.groupby(prob_bins)['y_true'].mean()
                 prob_means = group_data.groupby(prob_bins)['y_prob'].mean()
                 avg_calibration_diff = (calibration_means - prob_means).abs().mean()
                 calibration_data[str(group)] = float(avg_calibration_diff if not pd.isna(avg_calibration_diff) else 0.0)
-            else:
-                calibration_data[str(group)] = 0.0
             
-            # AUC by group
-            if len(group_data['y_true'].unique()) > 1 and len(group_data) > 5:
+            # AUC by group -- requires genuine probability scores
+            if has_real_y_prob and len(group_data['y_true'].unique()) > 1 and len(group_data) > 5:
                 try:
                     auc = roc_auc_score(group_data['y_true'], group_data['y_prob'])
                     auc_scores[str(group)] = float(auc)
                 except:
                     auc_scores[str(group)] = 0.5
             
-            # Predictive values
+            # Predictive values -- do not depend on y_prob
             tp = ((group_data['y_true'] == 1) & (group_data['y_pred'] == 1)).sum()
             fp = ((group_data['y_true'] == 0) & (group_data['y_pred'] == 1)).sum()
             tn = ((group_data['y_true'] == 0) & (group_data['y_pred'] == 0)).sum()
@@ -445,15 +464,19 @@ def calculate_predictive_causal_reliability(df: pd.DataFrame) -> Dict[str, Any]:
             ppv_values[str(group)] = float(ppv)
             npv_values[str(group)] = float(npv)
         
-        # Calibration metrics
-        metrics['calibration_by_group'] = calibration_data
-        if calibration_data and len(calibration_data) >= 2:
-            metrics['calibration_gap'] = float(max(calibration_data.values()) - min(calibration_data.values()))
+        # Calibration metrics -- None (not fabricated) when no genuine probability column exists
+        if has_real_y_prob:
+            metrics['calibration_by_group'] = calibration_data
+            if calibration_data and len(calibration_data) >= 2:
+                metrics['calibration_gap'] = float(max(calibration_data.values()) - min(calibration_data.values()))
+            else:
+                metrics['calibration_gap'] = 0.0
         else:
-            metrics['calibration_gap'] = 0.0
+            metrics['calibration_by_group'] = None
+            metrics['calibration_gap'] = None
         
-        # AUC metrics
-        if auc_scores and len(auc_scores) >= 2:
+        # AUC metrics -- None (not fabricated) when no genuine probability column exists
+        if has_real_y_prob and auc_scores and len(auc_scores) >= 2:
             metrics['slice_auc_difference'] = float(max(auc_scores.values()) - min(auc_scores.values()))
             
             # AUC over threshold disparity (simplified)
@@ -473,9 +496,12 @@ def calculate_predictive_causal_reliability(df: pd.DataFrame) -> Dict[str, Any]:
                     auc_disparities.append(max(threshold_aucs) - min(threshold_aucs))
             
             metrics['auc_over_threshold_disparity'] = float(np.mean(auc_disparities)) if auc_disparities else 0.0
-        else:
+        elif has_real_y_prob:
             metrics['slice_auc_difference'] = 0.0
             metrics['auc_over_threshold_disparity'] = 0.0
+        else:
+            metrics['slice_auc_difference'] = None
+            metrics['auc_over_threshold_disparity'] = None
         
         # Predictive value parity
         if ppv_values and len(ppv_values) >= 2:
@@ -782,19 +808,31 @@ def calculate_temporal_operational_fairness(df: pd.DataFrame) -> Dict[str, Any]:
 
 def calculate_composite_bias_score(metrics: Dict[str, Any]) -> float:
     """Calculate composite bias score from all metrics"""
-    high_impact_metrics = [
-        metrics.get('statistical_parity_difference', 0),
-        metrics.get('true_positive_rate_difference', 0),
-        metrics.get('false_positive_rate_difference', 0),
-        metrics.get('error_disparity_by_subgroup', 0),
-        metrics.get('calibration_gap', 0),
-        metrics.get('slice_auc_difference', 0)
+    # Weights are renormalized over only the components genuinely computed
+    # this run -- a component that's None or absent (e.g. calibration_gap/
+    # slice_auc_difference when no real y_prob column exists) must NOT be
+    # conflated with a component that was computed and came out at 0.0.
+    component_specs = [
+        ('statistical_parity_difference', 0.25),
+        ('true_positive_rate_difference', 0.2),
+        ('false_positive_rate_difference', 0.2),
+        ('error_disparity_by_subgroup', 0.15),
+        ('calibration_gap', 0.1),
+        ('slice_auc_difference', 0.1),
     ]
-    
-    weights = [0.25, 0.2, 0.2, 0.15, 0.1, 0.1]
-    weighted_sum = sum(metric * weight for metric, weight in zip(high_impact_metrics, weights))
-    
-    return float(min(1.0, weighted_sum))
+
+    weighted_sum = 0.0
+    total_weight = 0.0
+    for name, weight in component_specs:
+        value = metrics.get(name)
+        if value is None:
+            continue
+        weighted_sum += value * weight
+        total_weight += weight
+
+    if total_weight > 0:
+        return float(min(1.0, weighted_sum / total_weight))
+    return 0.0
 
 def assess_business_fairness(metrics: Dict[str, Any]) -> str:
     """Assess overall business fairness based on metrics - ORIGINAL FUNCTION"""
@@ -850,7 +888,10 @@ def run_pipeline(df: pd.DataFrame, save_to_disk: bool = True) -> Dict[str, Any]:
         # Build comprehensive results
         results = {
             "domain": "business",
-            "metrics_calculated": 60,
+            "metrics_calculated": len([
+                k for k, v in business_metrics.items()
+                if k in {name for cat in BUSINESS_METRICS_CONFIG.values() for name in cat} and v is not None
+            ]),
             "metric_categories": BUSINESS_METRICS_CONFIG,
             "fairness_metrics": business_metrics,
             "summary": {
@@ -887,7 +928,7 @@ def run_audit_from_request(audit_request: Dict[str, Any]) -> Dict[str, Any]:
         return {
             "status": "success",
             "domain": "business",
-            "metrics_calculated": 60,
+            "metrics_calculated": results.get('metrics_calculated'),
             "results": results
         }
     except Exception as e:
