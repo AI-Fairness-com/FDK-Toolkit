@@ -336,30 +336,43 @@ class JusticeFairnessPipeline:
         return metrics
 
     def _calculate_composite_bias_score_fixed(self, available_metrics: Dict[str, Any]) -> float:
-        """Composite bias score for justice domain - FIXED no circular dependency"""
+        """Composite bias score for justice domain - FIXED no circular dependency.
+        Weights are renormalized over only the components that were genuinely
+        computed this run -- a component absent from available_metrics (e.g.
+        predictive_equality when a group's confusion matrix had only one
+        class) must NOT be conflated with a component that was computed and
+        genuinely came out at 0.0. The old fixed-weight formula silently
+        treated "missing" as "perfectly fair" and kept its full weight in the
+        denominator, understating the true composite score whenever any
+        component was absent.
+        """
         try:
-            # Use only available metrics, don't require all
-            statistical_parity = available_metrics.get('statistical_parity_difference', 0.0)
-            equal_opportunity = available_metrics.get('equal_opportunity_difference', 0.0)
-            predictive_equality = available_metrics.get('predictive_equality', 0.0)
-            
-            error_disparity_data = available_metrics.get('error_disparity_subgroup', {})
-            if isinstance(error_disparity_data, dict):
-                error_disparity = error_disparity_data.get('range', 0.0)
-            else:
-                error_disparity = 0.0
-            
-            # Normalize components to similar scales
-            bias_components = [
-                min(1.0, statistical_parity),  # Cap at 1.0
-                min(1.0, equal_opportunity),
-                min(1.0, predictive_equality),
-                min(1.0, error_disparity)
+            component_specs = [
+                ('statistical_parity_difference', 0.3),
+                ('equal_opportunity_difference', 0.2),
+                ('predictive_equality', 0.3),
+                ('error_disparity_subgroup', 0.2),
             ]
-            weights = [0.3, 0.2, 0.3, 0.2]
-            
-            weighted_sum = sum(comp * weight for comp, weight in zip(bias_components, weights))
-            return float(weighted_sum)
+            weighted_sum = 0.0
+            total_weight = 0.0
+            for name, weight in component_specs:
+                if name == 'error_disparity_subgroup':
+                    data = available_metrics.get(name)
+                    if isinstance(data, dict) and data.get('range') is not None:
+                        value = data['range']
+                    else:
+                        continue
+                else:
+                    if name in available_metrics and available_metrics[name] is not None:
+                        value = available_metrics[name]
+                    else:
+                        continue
+                weighted_sum += min(1.0, value) * weight
+                total_weight += weight
+
+            if total_weight > 0:
+                return float(weighted_sum / total_weight)
+            return 0.0
             
         except Exception:
             return 0.0
@@ -467,16 +480,26 @@ class JusticeFairnessPipeline:
         
         for col in numeric_cols:
             group_means = []
+            skip_column = False
             for group in groups:
                 group_mask = df['group'] == group
-                group_mean = float(df[group_mask][col].mean())
-                group_means.append(group_mean)
+                group_series = df[group_mask][col].dropna()
+                if len(group_series) == 0:
+                    # This group has no non-missing values for this feature --
+                    # can't meaningfully compare it across groups, so skip the
+                    # whole column rather than let a NaN poison the final average.
+                    skip_column = True
+                    break
+                group_means.append(float(group_series.mean()))
             
-            if len(group_means) >= 2:
-                disparity = float(max(group_means) - min(group_means))
-                col_std = float(df[col].std())
-                if col_std > 0:
-                    disparity /= col_std
+            if skip_column or len(group_means) < 2:
+                continue
+
+            disparity = float(max(group_means) - min(group_means))
+            col_std = float(df[col].std(skipna=True))
+            if col_std > 0 and not np.isnan(col_std):
+                disparity /= col_std
+            if not np.isnan(disparity):
                 feature_disparities.append(disparity)
         
         return float(np.mean(feature_disparities)) if feature_disparities else 0.0
@@ -527,18 +550,44 @@ class JusticeFairnessPipeline:
         if len(groups) < 2:
             raise ValueError("Need at least 2 groups for justice fairness analysis")
 
-        # Minimum subgroup size check (consistent with other FDK domains)
+        # Independent last-line-of-defense check: y_true and y_pred must be
+        # genuinely binary {0,1}, regardless of what the upstream column-mapping
+        # step decided. Deliberately redundant with the detection-time checks in
+        # fdk_justice.py, so a single bad mapping upstream can't silently
+        # corrupt every downstream metric.
+        for col in ['y_true', 'y_pred']:
+            col_vals = set(df[col].dropna().unique())
+            if not col_vals.issubset({0, 1}):
+                raise ValueError(
+                    f"Column mapped to '{col}' is not binary (found values: "
+                    f"{sorted(col_vals)[:10]}{'...' if len(col_vals) > 10 else ''}). "
+                    f"Fairness metrics require a genuine binary outcome/prediction column."
+                )
+
+        # Minimum subgroup size handling: soft-exclude undersized groups rather
+        # than rejecting the whole dataset. A group below 20 samples can't
+        # support a reliable statistic on its own, but that doesn't mean the
+        # rest of a real-world dataset (which may naturally have some small
+        # demographic groups, e.g. COMPAS's Native American subgroup) should
+        # be thrown away. Still hard-rejects if exclusion leaves fewer than 2
+        # groups to compare.
         group_counts = df['group'].value_counts()
         small_groups = group_counts[group_counts < 20]
+        excluded_groups_warning = None
         if len(small_groups) > 0:
-            raise ValueError(
-                f"Smallest subgroup(s) below 20 samples (< 20 required for statistical validity): "
-                f"{small_groups.to_dict()}"
+            excluded_groups_warning = (
+                f"Excluded {len(small_groups)} subgroup(s) below the 20-sample minimum "
+                f"required for statistical validity: {small_groups.to_dict()}. "
+                f"Metrics below are computed only on the remaining, adequately-sized groups."
             )
+            df = df[~df['group'].isin(small_groups.index)].copy()
 
         groups = df['group'].unique()
         if len(groups) < 2:
-            raise ValueError("Need at least 2 groups for justice fairness analysis")
+            raise ValueError(
+                "Need at least 2 groups with 20+ samples each for justice fairness analysis "
+                "after excluding undersized subgroups."
+            )
 
         metrics = {}
         metrics.update(self.calculate_core_group_fairness(df))
@@ -552,6 +601,9 @@ class JusticeFairnessPipeline:
         # FIXED: Pass only current metrics to avoid circular dependency
         robustness_metrics = self.calculate_robustness_worst_case(df, all_metrics=metrics)
         metrics.update(robustness_metrics)
+
+        if excluded_groups_warning:
+            metrics['data_quality_warnings'] = [excluded_groups_warning]
         
         self.metrics_history.append(metrics.copy())
         if len(self.metrics_history) > self.temporal_window:
@@ -568,7 +620,7 @@ class JusticeFairnessPipeline:
             
             results = {
                 "domain": "justice",
-                "metrics_calculated": len([k for k in justice_metrics.keys() if not k.endswith('_by_group')]),
+                "metrics_calculated": len([k for k in justice_metrics.keys() if k != 'data_quality_warnings']),
                 "metric_categories": JUSTICE_METRICS_CONFIG,
                 "fairness_metrics": justice_metrics,
                 "validation": {
