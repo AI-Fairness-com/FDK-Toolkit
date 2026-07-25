@@ -51,6 +51,7 @@ HEALTH_METRICS_CONFIG = {
     'subgroup_disparity_analysis': [
         'error_disparity_subgroup',
         'worst_group_accuracy',
+        'worst_group_loss',
         'worst_group_calibration_gap',
         'mdss_subgroup_score',
         'mdss_rich_subgroup_metric'
@@ -73,6 +74,9 @@ HEALTH_METRICS_CONFIG = {
         'feature_attribution_bias',
         'validation_holdout_robustness',
         'temporal_fairness_score'
+    ],
+    'composite_scoring': [
+        'composite_bias_score'
     ]
 }
 
@@ -172,7 +176,32 @@ class HealthFairnessPipeline:
             validation_results["errors"].append(
                 f"Smallest subgroup(s) below 20 samples (< 20 required for statistical validity): {small_groups}"
             )
-        
+
+        # Independent last-line-of-defense check: y_true and y_pred must be genuinely
+        # binary {0,1}-equivalent, regardless of what the upstream column-mapping step
+        # decided. This is deliberately redundant with the detection-time checks in
+        # fdk_health.py -- catches the case where a non-binary column (e.g. a count
+        # column that happens to have only 2 distinct values in a given sample) reaches
+        # the pipeline anyway, so a single bad mapping upstream can't silently corrupt
+        # every downstream metric.
+        for role in ['y_true', 'y_pred']:
+            if role not in df.columns:
+                continue
+            col_vals = set(pd.Series(df[role]).dropna().unique())
+            is_binary = (
+                col_vals.issubset({0, 1}) or
+                col_vals.issubset({0.0, 1.0}) or
+                col_vals.issubset({True, False}) or
+                col_vals.issubset({1, 2})
+            )
+            if not is_binary:
+                validation_results["is_valid"] = False
+                validation_results["errors"].append(
+                    f"Column mapped to '{role}' is not binary (found values: "
+                    f"{sorted(col_vals)[:10]}{'...' if len(col_vals) > 10 else ''}). "
+                    f"Fairness metrics require a genuine binary outcome/prediction column."
+                )
+
         return validation_results
 
     # ================================================================
@@ -1079,36 +1108,46 @@ class HealthFairnessPipeline:
     def calculate_composite_bias_score(self, all_metrics: Dict[str, Any]) -> float:
         """Enhanced composite bias score for healthcare"""
         try:
-            # Comprehensive key metrics for healthcare bias assessment
-            key_metrics = [
-                all_metrics.get('statistical_parity_difference', 0.0),
-                all_metrics.get('equal_opportunity_difference', 0.0),
-                all_metrics.get('equalized_odds_difference', 0.0),
-                all_metrics.get('tpr_difference', 0.0),
-                all_metrics.get('fpr_difference', 0.0),
-                all_metrics.get('fnr_difference', 0.0),  # Critical for healthcare
-                all_metrics.get('calibration_gap_difference', 0.0),
-                all_metrics.get('error_disparity_subgroup', {}).get('range', 0.0),
-                all_metrics.get('counterfactual_flip_rate', 0.0),
-                all_metrics.get('feature_attribution_bias', 0.0),
-                all_metrics.get('critical_error_disparity', 0.0),  # NEW healthcare critical
-                all_metrics.get('undertreatment_disparity', 0.0)   # NEW healthcare critical
+            # Comprehensive key metrics for healthcare bias assessment.
+            # Tracked as (name, is_critical) so weighting is tied to WHICH
+            # metric a value came from, not what the value happens to equal --
+            # two different metrics can legitimately share the same numeric
+            # value, and the old value-based `in` check silently mis-assigned
+            # the patient-safety weight whenever that happened. A metric
+            # absent from all_metrics is also no longer conflated with one
+            # that was genuinely computed and came out at exactly 0.0 --
+            # only truly-present values are averaged, so a perfectly-fair
+            # dimension is no longer silently dropped and inflating the score.
+            critical_names = {'fnr_difference', 'critical_error_disparity', 'undertreatment_disparity'}
+            key_metric_names = [
+                'statistical_parity_difference',
+                'equal_opportunity_difference',
+                'equalized_odds_difference',
+                'tpr_difference',
+                'fpr_difference',
+                'fnr_difference',  # Critical for healthcare
+                'calibration_gap_difference',
+                None,  # placeholder for error_disparity_subgroup.range, handled below
+                'counterfactual_flip_rate',
+                'feature_attribution_bias',
+                'critical_error_disparity',  # NEW healthcare critical
+                'undertreatment_disparity'   # NEW healthcare critical
             ]
-            
-            # Calculate weighted average, prioritizing healthcare-critical metrics
-            non_zero_metrics = [m for m in key_metrics if m > 0]
-            if non_zero_metrics:
-                # Give higher weight to healthcare-critical metrics
-                weights = []
-                for metric in non_zero_metrics:
-                    if metric in [all_metrics.get('fnr_difference', 0.0), 
-                                 all_metrics.get('critical_error_disparity', 0.0),
-                                 all_metrics.get('undertreatment_disparity', 0.0)]:
-                        weights.append(2.0)  # Double weight for patient safety metrics
-                    else:
-                        weights.append(1.0)
-                
-                weighted_avg = np.average(non_zero_metrics, weights=weights)
+
+            available = []  # list of (value, is_critical)
+            for name in key_metric_names:
+                if name is None:
+                    subgroup = all_metrics.get('error_disparity_subgroup')
+                    if isinstance(subgroup, dict) and subgroup.get('range') is not None:
+                        available.append((subgroup['range'], False))
+                    continue
+                if name in all_metrics and all_metrics[name] is not None:
+                    available.append((all_metrics[name], name in critical_names))
+
+            if available:
+                values = [v for v, _ in available]
+                weights = [2.0 if is_crit else 1.0 for _, is_crit in available]
+                weighted_avg = np.average(values, weights=weights)
                 return self.bounded_value(weighted_avg)
             else:
                 return 0.0
@@ -1163,7 +1202,7 @@ class HealthFairnessPipeline:
             
             results = {
                 "domain": "health",
-                "metrics_calculated": 45,  # UPDATED TO 45
+                "metrics_calculated": len(health_metrics.keys()),
                 "metric_categories": HEALTH_METRICS_CONFIG,
                 "fairness_metrics": health_metrics,
                 "validation": {
@@ -1277,13 +1316,15 @@ def run_audit_from_request(audit_request: Dict[str, Any]) -> Dict[str, Any]:
         return {
             "status": "success",
             "domain": "health",
-            "metrics_calculated": 45,  # UPDATED TO 45
+            "metrics_calculated": results.get('metrics_calculated'),
             "results": results
         }
     except Exception as e:
         return {
             "status": "error",
-            "message": f"Health audit failed: {str(e)}"
+            "domain": "health",
+            "error": str(e),
+            "metrics_calculated": 0
         }
 
 # Production usage example

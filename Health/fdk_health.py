@@ -8,6 +8,7 @@
 # ================================================================
 
 import os
+import re
 import json
 import pandas as pd
 import numpy as np
@@ -91,7 +92,7 @@ def detect_health_column_mappings(df, columns, test_type='pre_implementation', u
         
         # GROUP COLUMN: Detect patient demographic groups
         if not suggestions['group']:
-            if col_data.dtype == 'object' or (col_data.nunique() <= 10 and col_data.nunique() > 1):
+            if 1 < col_data.nunique() <= 20:
                 health_group_keywords = ['race', 'ethnic', 'gender', 'age_group', 'location', 
                                        'region', 'type', 'category', 'demographic', 'patient_group', 
                                        'population', 'background', 'ethnicity', 'age', 'sex', 'demographics']
@@ -155,9 +156,15 @@ def detect_health_column_mappings(df, columns, test_type='pre_implementation', u
 
         # TIMESTAMP: optional column enabling temporal fairness / model decay metrics
         if not suggestions.get('timestamp'):
-            if any(keyword in col.lower() for keyword in ['timestamp', 'date', 'decision_date', 'time', 'datetime']):
+            timestamp_keywords = ['timestamp', 'date', 'decision_date', 'time', 'datetime']
+            col_tokens = set(re.split(r'[^a-z0-9]+', col.lower()))
+            keyword_matched = any(set(kw.split('_')).issubset(col_tokens) for kw in timestamp_keywords)
+            if keyword_matched:
                 try:
-                    pd.to_datetime(df[col], errors='raise')
+                    parsed = pd.to_datetime(df[col], errors='raise')
+                    non_null = parsed.dropna()
+                    if non_null.empty or non_null.dt.year.min() < 1971:
+                        raise ValueError("degenerate epoch-adjacent parse")
                     suggestions['timestamp'] = col
                     reasoning[col] = "Detected as a parseable date/time column for temporal fairness metrics"
                     continue
@@ -173,22 +180,32 @@ def detect_health_column_mappings(df, columns, test_type='pre_implementation', u
                 reasoning[col] = "Suggested patient groups (categorical)"
                 break
                 
-    # y_true fallback: first binary column
+    # y_true fallback: first genuinely binary column (not just any two-valued column)
     if not suggestions['y_true']:
         for col in columns:
             if df[col].dtype in ['int64', 'float64'] and df[col].nunique() == 2:
-                suggestions['y_true'] = col
-                reasoning[col] = "Suggested medical outcomes (binary)"
-                break
+                unique_vals = set(df[col].dropna().unique())
+                if (unique_vals.issubset({0, 1}) or
+                    unique_vals.issubset({0.0, 1.0}) or
+                    unique_vals.issubset({True, False}) or
+                    unique_vals.issubset({1, 2})):
+                    suggestions['y_true'] = col
+                    reasoning[col] = "Suggested medical outcomes (binary)"
+                    break
                 
-    # y_pred fallback: first binary column that isn't y_true
+    # y_pred fallback: first genuinely binary column that isn't y_true
     if not suggestions['y_pred']:
         for col in columns:
-            if (col != suggestions['y_true'] and df[col].dtype in ['int64', 'float64'] 
+            if (col != suggestions['y_true'] and df[col].dtype in ['int64', 'float64']
                 and df[col].nunique() == 2):
-                suggestions['y_pred'] = col
-                reasoning[col] = "Suggested model predictions (binary)"
-                break
+                unique_vals = set(df[col].dropna().unique())
+                if (unique_vals.issubset({0, 1}) or
+                    unique_vals.issubset({0.0, 1.0}) or
+                    unique_vals.issubset({True, False}) or
+                    unique_vals.issubset({1, 2})):
+                    suggestions['y_pred'] = col
+                    reasoning[col] = "Suggested model predictions (binary)"
+                    break
         # If still not found, use y_true as y_pred (common in pre-implementation tests)
         if not suggestions['y_pred'] and suggestions['y_true']:
             suggestions['y_pred'] = suggestions['y_true']
@@ -204,6 +221,130 @@ def detect_health_column_mappings(df, columns, test_type='pre_implementation', u
                     break
     
     return suggestions, reasoning, intelligent_suggestion
+
+# ================================================================
+# No-Code Dropdown Support (ported from the Finance reference
+# implementation) -- powers the confirmation-page manual-override UX.
+# ================================================================
+
+def _describe_column(df, col, role=None):
+    """
+    Plain-language, jargon-free description of a candidate column, for display
+    next to each dropdown option on the confirmation page.
+
+    `role` matters: for group/target/prediction, "every value is unique" means
+    "this is an ID column, not usable." For probability, every value being
+    distinct is completely normal -- it's a genuine continuous score, not a bug.
+    """
+    series = df[col]
+    n_unique = series.nunique()
+    n_total = len(series)
+
+    if role == 'y_prob':
+        vmin, vmax = series.min(), series.max()
+        return f"{col} — continuous values ranging {vmin:.3f} to {vmax:.3f}"
+
+    if n_unique == n_total:
+        return f"{col} — every value is unique (likely an ID column, not usable here)"
+
+    if series.dtype == object or n_unique <= 10:
+        top_vals = series.dropna().unique()[:5]
+        vals_str = ", ".join(str(v) for v in top_vals)
+        return f"{col} — {n_unique} categories ({vals_str}{', ...' if n_unique > 5 else ''})"
+
+    return f"{col} — {n_unique} distinct numeric values"
+
+
+def _candidate_columns(df, role, exclude=None):
+    """
+    Filters a dataset's columns down to the ones that are statistically
+    plausible for a given role. This is what makes each dropdown short and
+    relevant instead of showing all 50 raw column names.
+
+    - group: low-cardinality (2-10 unique values), not a pure identifier
+    - y_true / y_pred: genuinely binary (matches the same {0,1}/{1,2}-style
+      convention used in detect_health_column_mappings, not just "has 2
+      unique values")
+    - y_prob: continuous float column in the 0-1 range. Deliberately does
+      NOT apply the identifier-exclusion check -- a real probability column
+      naturally has every value unique, and excluding it here was the exact
+      bug (Finding 1) fixed during the Finance validation.
+    """
+    exclude = exclude or set()
+    candidates = []
+    for col in df.columns:
+        if col in exclude:
+            continue
+        series = df[col]
+        n_unique = series.nunique()
+        n_total = len(series)
+        is_identifier = (n_unique == n_total)
+
+        if role == 'group':
+            if is_identifier:
+                continue
+            if 1 < n_unique <= 20:
+                candidates.append(col)
+
+        elif role in ('y_true', 'y_pred'):
+            if is_identifier:
+                continue
+            if series.dtype in ['int64', 'float64', 'bool'] and n_unique == 2:
+                unique_vals = set(series.dropna().unique())
+                if (unique_vals.issubset({0, 1}) or
+                    unique_vals.issubset({0.0, 1.0}) or
+                    unique_vals.issubset({True, False}) or
+                    unique_vals.issubset({1, 2})):
+                    candidates.append(col)
+
+        elif role == 'y_prob':
+            # No identifier-exclusion here -- see docstring.
+            if series.dtype in ['float64', 'float32'] and n_unique > 2:
+                try:
+                    if series.dropna().between(0, 1).all():
+                        candidates.append(col)
+                except Exception:
+                    continue
+
+    return candidates
+
+
+def build_column_options(df, suggested_mappings):
+    """
+    Assembles the four per-role candidate lists for the confirmation page,
+    each excluding whatever's already suggested for a different role (so the
+    same column can't appear as both, say, group and target), and attaches a
+    plain-language description to every option.
+
+    Returns: {role: [{"column": name, "description": str, "selected": bool}, ...]}
+    """
+    roles = ['group', 'y_true', 'y_pred', 'y_prob']
+    options = {}
+
+    for role in roles:
+        already_used_elsewhere = {
+            v for r, v in suggested_mappings.items()
+            if r in roles and r != role and v
+        }
+        candidates = _candidate_columns(df, role, exclude=already_used_elsewhere)
+
+        # Always make sure the current suggestion itself appears as an option,
+        # even if it wouldn't otherwise pass the candidate filter -- the user
+        # should be able to see (and keep) what was auto-selected.
+        suggested = suggested_mappings.get(role)
+        if suggested and suggested not in candidates and suggested in df.columns:
+            candidates = [suggested] + candidates
+
+        options[role] = [
+            {
+                "column": col,
+                "description": _describe_column(df, col, role=role),
+                "selected": (col == suggested),
+            }
+            for col in candidates
+        ]
+
+    return options
 
 # ================================================================
 # Summary Generation (Preserves Risk Communication Logic)
@@ -369,22 +510,19 @@ def _analyze_performance_gaps(fairness_metrics: dict) -> list:
 def _analyze_calibration(audit: dict) -> list:
     """Analyze prediction reliability across groups"""
     lines = []
-    calibration_gap = audit.get("calibration_gap", {})
-    
-    if calibration_gap.get("by_group"):
+    max_calib_gap = audit.get("calibration_gap_difference")
+
+    if max_calib_gap is not None:
         lines.append("3) PREDICTION RELIABILITY (Calibration):")
-        calib_values = [v for v in calibration_gap["by_group"].values() if v is not None]
-        if calib_values:
-            max_calib_gap = max(calib_values) if calib_values else 0
-            lines.append(f"   → Maximum Calibration Gap: {max_calib_gap:.3f}")
-            if max_calib_gap > 0.1:
-                lines.append("     🚨 HIGH: Prediction scores may be unreliable for some groups")
-                lines.append("     → Clinical interpretation of scores may vary by patient group")
-            elif max_calib_gap > 0.05:
-                lines.append("     ⚠️  MEDIUM: Moderate reliability concerns")
-                lines.append("     → Consider group-specific score interpretation")
-            else:
-                lines.append("     ✅ LOW: Consistent score reliability across groups")
+        lines.append(f"   → Maximum Calibration Gap: {max_calib_gap:.3f}")
+        if max_calib_gap > 0.1:
+            lines.append("     🚨 HIGH: Prediction scores may be unreliable for some groups")
+            lines.append("     → Clinical interpretation of scores may vary by patient group")
+        elif max_calib_gap > 0.05:
+            lines.append("     ⚠️  MEDIUM: Moderate reliability concerns")
+            lines.append("     → Consider group-specific score interpretation")
+        else:
+            lines.append("     ✅ LOW: Consistent score reliability across groups")
         lines.append("")
     
     return lines
@@ -392,13 +530,13 @@ def _analyze_calibration(audit: dict) -> list:
 def _analyze_worst_group(audit: dict) -> list:
     """Identify highest risk group"""
     lines = []
-    subgroup_analysis = audit.get("subgroup_analysis", {})
-    worst_group_info = subgroup_analysis.get("worst_group_analysis", {})
-    
-    if worst_group_info.get("overall_worst_group"):
+    error_disparity = audit.get("error_disparity_subgroup", {})
+    worst_group = error_disparity.get("max_error_group")
+
+    if worst_group:
         lines.append("4) HIGHEST RISK GROUP IDENTIFIED:")
-        lines.append(f"   → Group: {worst_group_info['overall_worst_group']}")
-        lines.append(f"   → Severity Score: {worst_group_info.get('overall_severity_score', 0):.3f}")
+        lines.append(f"   → Group: {worst_group}")
+        lines.append(f"   → Error Rate Gap: {error_disparity.get('range', 0):.3f}")
         lines.append("   → This group experiences the most significant performance issues")
         lines.append("")
     
@@ -577,7 +715,19 @@ def start_health_audit_process():
         suggested_mappings, column_reasoning, intelligent_suggestion = detect_health_column_mappings(
             df, columns, test_type, user_selected_target
         )
-        
+
+        # Sanitization: null out any suggested mapping that isn't actually in its
+        # own role's valid-candidate list, rather than trusting the detection
+        # heuristics blindly. This is the same fix that resolved the Finance
+        # domain's non-binary-column corruption bug (a keyword-matched column
+        # that isn't genuinely valid for its role should never reach the
+        # pipeline unmarked).
+        for role in ['group', 'y_true', 'y_pred', 'y_prob']:
+            candidate_list = _candidate_columns(df, role)
+            if suggested_mappings.get(role) and suggested_mappings[role] not in candidate_list:
+                print(f"⚠️ Sanitizing invalid '{role}' suggestion: {suggested_mappings[role]} is not a valid candidate for this role")
+                suggested_mappings[role] = None
+
         # Validate required mappings
         required_mappings = ['group', 'y_true', 'y_pred']
         missing_required = [m for m in required_mappings if m not in suggested_mappings or not suggested_mappings[m]]
@@ -596,12 +746,17 @@ def start_health_audit_process():
         session['user_selected_target'] = user_selected_target
         session['intelligent_suggestion'] = intelligent_suggestion
         
-        detected_key_features = len([m for m in suggested_mappings.values() if m is not None])
-        
+        detected_key_features = len([k for k in ('group', 'y_true', 'y_pred', 'y_prob') if suggested_mappings.get(k) is not None])
+
+        # Build the filtered, role-appropriate dropdown options for the
+        # confirmation page's manual-override UX.
+        column_options = build_column_options(df, suggested_mappings)
+
         return render_template(
             'auto_confirm_health.html',
             suggested_mappings=suggested_mappings,
             column_reasoning=column_reasoning,
+            column_options=column_options,
             total_columns=len(columns),
             filename=file.filename,
             detected_key_features=detected_key_features,
@@ -629,7 +784,27 @@ def run_health_audit_with_mapping():
     
     try:
         df = pd.read_csv(dataset_path)
-        
+
+        # Apply any manual overrides submitted from the confirmation page's
+        # dropdowns. Each override is re-validated against its role's own
+        # candidate list before being accepted -- a user can only pick from
+        # what was already offered, but this guards against a tampered or
+        # stale request re-introducing an invalid column.
+        override_params = {
+            'group': request.args.get('group_col'),
+            'y_true': request.args.get('y_true_col'),
+            'y_pred': request.args.get('y_pred_col'),
+            'y_prob': request.args.get('y_prob_col'),
+        }
+        for role, override_value in override_params.items():
+            if not override_value:
+                continue
+            valid_candidates = _candidate_columns(df, role)
+            if override_value in valid_candidates:
+                column_mapping[role] = override_value
+            else:
+                print(f"⚠️ Ignoring invalid '{role}' override from request: {override_value}")
+
         # Validate required mappings
         required_mappings = ['group', 'y_true', 'y_pred']
         missing_required = [m for m in required_mappings if m not in column_mapping or not column_mapping[m]]
