@@ -1,6 +1,6 @@
 # ================================================================
 # FDK Hiring Pipeline - PRODUCTION READY
-# 34 Comprehensive Hiring Fairness Metrics
+# 25 Comprehensive Hiring Fairness Metrics
 # MIT License - AI Ethics Research Group
 # ================================================================
 
@@ -19,7 +19,7 @@ HIRING_METRICS_CONFIG = {
     'core_group_fairness': [
         'statistical_parity_difference',
         'disparate_impact',
-        'selection_rate',
+        'selection_rates',
         'normalized_mean_difference'
     ],
     'equality_opportunity_treatment': [
@@ -471,17 +471,28 @@ class HiringFairnessPipeline:
             if valid_accuracies:
                 metrics['worst_group_accuracy'] = float(min(valid_accuracies))
         
-        key_metrics = [
-            all_metrics.get('statistical_parity_difference', 0.0),
-            all_metrics.get('equal_opportunity_difference', 0.0),
-            all_metrics.get('fpr_difference', 0.0),
-            all_metrics.get('fnr_difference', 0.0),
-            all_metrics.get('counterfactual_flip_rate', 0.0)
+        # Only average over metrics that were actually computed this run --
+        # a metric absent from all_metrics must not be conflated with one
+        # that was computed and genuinely came out at 0.0 (perfectly fair on
+        # that dimension). The old `.get(name, 0.0)` + `if metric > 0` filter
+        # treated both cases identically and silently dropped every
+        # perfectly-fair dimension from the average, inflating the composite
+        # score whenever any dimension was well-behaved.
+        key_metric_names = [
+            'statistical_parity_difference',
+            'equal_opportunity_difference',
+            'fpr_difference',
+            'fnr_difference',
+            'counterfactual_flip_rate'
         ]
-        
-        non_zero_metrics = [m for m in key_metrics if m > 0]
-        if non_zero_metrics:
-            metrics['composite_bias_score'] = float(np.mean(non_zero_metrics))
+
+        available_metrics = [
+            all_metrics[name] for name in key_metric_names
+            if name in all_metrics and all_metrics[name] is not None
+        ]
+
+        if available_metrics:
+            metrics['composite_bias_score'] = float(np.mean(available_metrics))
         else:
             metrics['composite_bias_score'] = 0.0
         
@@ -522,7 +533,7 @@ class HiringFairnessPipeline:
     # ================================================================
 
     def calculate_all_metrics(self, df: pd.DataFrame) -> Dict[str, Any]:
-        """Calculate all 34 hiring fairness metrics"""
+        """Calculate all 25 hiring fairness metrics"""
         metrics = {}
         
         required_cols = ['group', 'y_true', 'y_pred']
@@ -542,6 +553,21 @@ class HiringFairnessPipeline:
                 f"Smallest subgroup(s) below 20 samples (< 20 required for statistical validity): "
                 f"{small_groups.to_dict()}"
             )
+
+        # Independent last-line-of-defense check: y_true and y_pred must be
+        # genuinely binary {0,1}, regardless of what the upstream column-mapping
+        # step decided. Deliberately redundant with the detection-time checks in
+        # fdk_hiring.py, so a single bad mapping upstream can't silently corrupt
+        # every downstream metric. Hiring's own convention is strict {0,1} only
+        # (no {1,2} allowance, unlike Health's clinical-coding convention).
+        for role in ['y_true', 'y_pred']:
+            col_vals = set(df[role].dropna().unique())
+            if not col_vals.issubset({0, 1}):
+                raise ValueError(
+                    f"Column mapped to '{role}' is not binary (found values: "
+                    f"{sorted(col_vals)[:10]}{'...' if len(col_vals) > 10 else ''}). "
+                    f"Fairness metrics require a genuine binary outcome/prediction column."
+                )
 
         metrics.update(self.calculate_core_group_fairness(df))
         metrics.update(self.calculate_equality_opportunity_treatment(df))
@@ -563,7 +589,7 @@ class HiringFairnessPipeline:
             
             results = {
                 "domain": "hiring",
-                "metrics_calculated": 34,
+                "metrics_calculated": len(hiring_metrics.keys()),
                 "metric_categories": HIRING_METRICS_CONFIG,
                 "fairness_metrics": hiring_metrics,
                 "validation": {

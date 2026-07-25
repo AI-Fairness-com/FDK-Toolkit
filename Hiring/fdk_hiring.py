@@ -8,6 +8,7 @@
 # ================================================================
 
 import os
+import re
 import json
 import pandas as pd
 import numpy as np
@@ -139,7 +140,7 @@ def detect_hiring_column_mappings(df, columns, test_type='pre_implementation', u
         
         # GROUP COLUMN: Detect applicant/demographic groups for hiring fairness
         if not suggestions['group']:
-            if col_data.dtype == 'object' or (col_data.nunique() <= 10 and col_data.nunique() > 1):
+            if 1 < col_data.nunique() <= 20:
                 if any(keyword in col.lower() for keyword in hiring_keywords['group']):
                     suggestions['group'] = col
                     reasoning[col] = "Applicant/demographic groups for hiring fairness analysis"
@@ -174,9 +175,15 @@ def detect_hiring_column_mappings(df, columns, test_type='pre_implementation', u
 
         # TIMESTAMP: optional column enabling temporal fairness metrics
         if not suggestions.get('timestamp'):
-            if any(keyword in col.lower() for keyword in ['timestamp', 'date', 'decision_date', 'time', 'datetime']):
+            timestamp_keywords = ['timestamp', 'date', 'decision_date', 'time', 'datetime']
+            col_tokens = set(re.split(r'[^a-z0-9]+', col.lower()))
+            keyword_matched = any(set(kw.split('_')).issubset(col_tokens) for kw in timestamp_keywords)
+            if keyword_matched:
                 try:
-                    pd.to_datetime(df[col], errors='raise')
+                    parsed = pd.to_datetime(df[col], errors='raise')
+                    non_null = parsed.dropna()
+                    if non_null.empty or non_null.dt.year.min() < 1971:
+                        raise ValueError("degenerate epoch-adjacent parse")
                     suggestions['timestamp'] = col
                     reasoning[col] = "Detected as a parseable date/time column for temporal fairness metrics"
                     continue
@@ -194,51 +201,158 @@ def detect_hiring_column_mappings(df, columns, test_type='pre_implementation', u
     if not suggestions['y_true']:
         for col in columns:
             if df[col].dtype in ['int64', 'float64'] and df[col].nunique() == 2:
-                suggestions['y_true'] = col
-                reasoning[col] = "Suggested hiring outcomes (binary)"
-                break
+                if set(df[col].dropna().unique()).issubset({0, 1}):
+                    suggestions['y_true'] = col
+                    reasoning[col] = "Suggested hiring outcomes (binary)"
+                    break
                 
     if not suggestions['y_pred']:
         for col in columns:
             if df[col].dtype in ['int64', 'float64'] and df[col].nunique() == 2:
-                if col != suggestions['y_true']:
+                if col != suggestions['y_true'] and set(df[col].dropna().unique()).issubset({0, 1}):
                     suggestions['y_pred'] = col
                     reasoning[col] = "Suggested hiring predictions (binary)"
                     break
     
     return suggestions, reasoning, intelligent_suggestion
 
+# ================================================================
+# No-Code Dropdown Support (ported from Finance/Health reference
+# implementation) -- powers the confirmation-page manual-override UX.
+# Hiring's own binary convention is strict {0,1} only (matching its
+# primary detection), unlike Health's {1,2}-inclusive clinical-coding
+# convention -- deliberately NOT copying that leniency here.
+# ================================================================
+
+def _describe_column(df, col, role=None):
+    """
+    Plain-language, jargon-free description of a candidate column, for
+    display next to each dropdown option on the confirmation page.
+    `role` matters: for group/target/prediction, "every value is unique"
+    means "this is an ID column, not usable." For probability, every
+    value being distinct is completely normal.
+    """
+    series = df[col]
+    n_unique = series.nunique()
+    n_total = len(series)
+
+    if role == 'y_prob':
+        vmin, vmax = series.min(), series.max()
+        return f"{col} — continuous values ranging {vmin:.3f} to {vmax:.3f}"
+
+    if n_unique == n_total:
+        return f"{col} — every value is unique (likely an ID column, not usable here)"
+
+    if series.dtype == object or n_unique <= 10:
+        top_vals = series.dropna().unique()[:5]
+        vals_str = ", ".join(str(v) for v in top_vals)
+        return f"{col} — {n_unique} categories ({vals_str}{', ...' if n_unique > 5 else ''})"
+
+    return f"{col} — {n_unique} distinct numeric values"
+
+
+def _candidate_columns(df, role, exclude=None):
+    """
+    Filters a dataset's columns down to the ones that are statistically
+    plausible for a given role.
+
+    - group: low-cardinality (2-10 unique values), not a pure identifier
+    - y_true / y_pred: genuinely binary, strict {0,1} only (Hiring's own
+      convention -- no {1,2} allowance)
+    - y_prob: continuous float column in the 0-1 range. Deliberately does
+      NOT apply the identifier-exclusion check -- a real probability
+      column naturally has every value unique.
+    """
+    exclude = exclude or set()
+    candidates = []
+    for col in df.columns:
+        if col in exclude:
+            continue
+        series = df[col]
+        n_unique = series.nunique()
+        n_total = len(series)
+        is_identifier = (n_unique == n_total)
+
+        if role == 'group':
+            if is_identifier:
+                continue
+            if 1 < n_unique <= 20:
+                candidates.append(col)
+
+        elif role in ('y_true', 'y_pred'):
+            if is_identifier:
+                continue
+            if series.dtype in ['int64', 'float64', 'bool'] and n_unique == 2:
+                unique_vals = set(series.dropna().unique())
+                if unique_vals.issubset({0, 1}) or unique_vals.issubset({0.0, 1.0}) or unique_vals.issubset({True, False}):
+                    candidates.append(col)
+
+        elif role == 'y_prob':
+            if series.dtype in ['float64', 'float32'] and n_unique > 2:
+                try:
+                    if series.dropna().between(0, 1).all():
+                        candidates.append(col)
+                except Exception:
+                    continue
+
+    return candidates
+
+
+def build_column_options(df, suggested_mappings):
+    """
+    Assembles the four per-role candidate lists for the confirmation
+    page, each excluding whatever's already suggested for a different
+    role, with a plain-language description attached to every option.
+
+    Returns: {role: [{"column": name, "description": str, "selected": bool}, ...]}
+    """
+    roles = ['group', 'y_true', 'y_pred', 'y_prob']
+    options = {}
+
+    for role in roles:
+        already_used_elsewhere = {
+            v for r, v in suggested_mappings.items()
+            if r in roles and r != role and v
+        }
+        candidates = _candidate_columns(df, role, exclude=already_used_elsewhere)
+
+        suggested = suggested_mappings.get(role)
+        if suggested and suggested not in candidates and suggested in df.columns:
+            candidates = [suggested] + candidates
+
+        options[role] = [
+            {
+                "column": col,
+                "description": _describe_column(df, col, role=role),
+                "selected": (col == suggested),
+            }
+            for col in candidates
+        ]
+
+    return options
+
 def build_hiring_summaries(audit_response):
     """Generate hiring-specific summaries from audit response"""
     summary_lines = []
-    
-    # Overall assessment
-    if 'overall_assessment' in audit_response:
-        overall = audit_response['overall_assessment']
-        summary_lines.append(f"<strong>Overall Fairness Score:</strong> {overall.get('fairness_score', 'N/A')}/100")
-        summary_lines.append(f"<strong>Risk Level:</strong> {overall.get('risk_level', 'Unknown')}")
-        summary_lines.append(f"<strong>Recommendation:</strong> {overall.get('recommendation', 'No recommendation available')}")
-    
-    # Group-level metrics
-    if 'group_metrics' in audit_response:
-        summary_lines.append("<br><strong>Group Performance:</strong>")
-        for group, metrics in audit_response['group_metrics'].items():
-            if isinstance(metrics, dict):
-                tpr = metrics.get('true_positive_rate', 'N/A')
-                summary_lines.append(f"  • {group}: Selection Rate = {tpr}")
-    
-    # Fairness violations
-    if 'violations' in audit_response and audit_response['violations']:
-        summary_lines.append(f"<br><strong>⚠️ Fairness Concerns Detected:</strong> {len(audit_response['violations'])} issues")
-        for violation in audit_response['violations'][:3]:  # Show top 3
-            summary_lines.append(f"  • {violation.get('metric', 'Unknown')}: {violation.get('description', 'No description')}")
-    
-    # Key recommendations
-    if 'recommendations' in audit_response and audit_response['recommendations']:
-        summary_lines.append("<br><strong>Key Recommendations:</strong>")
-        for rec in audit_response['recommendations'][:3]:  # Show top 3
-            summary_lines.append(f"  • {rec}")
-    
+
+    composite_score = audit_response.get("summary", {}).get("composite_bias_score")
+    overall_assessment = audit_response.get("summary", {}).get("overall_assessment")
+    fairness_metrics = audit_response.get("fairness_metrics", {})
+
+    if overall_assessment:
+        summary_lines.append(f"<strong>Overall Assessment:</strong> {overall_assessment}")
+    if composite_score is not None:
+        summary_lines.append(f"<strong>Composite Bias Score:</strong> {composite_score:.3f}")
+
+    if 'statistical_parity_difference' in fairness_metrics:
+        summary_lines.append(f"<br><strong>Selection Rate Disparity:</strong> {fairness_metrics['statistical_parity_difference']:.3f}")
+
+    if 'equal_opportunity_difference' in fairness_metrics:
+        summary_lines.append(f"<strong>Equal Opportunity Gap:</strong> {fairness_metrics['equal_opportunity_difference']:.3f}")
+
+    if 'worst_group_accuracy' in fairness_metrics:
+        summary_lines.append(f"<strong>Worst-Group Accuracy:</strong> {fairness_metrics['worst_group_accuracy']:.3f}")
+
     return summary_lines
 
 # ================================================================
@@ -365,6 +479,15 @@ def hiring_upload_page():
             df, columns, test_type, user_selected_target,
             session_id=comparative_study_id  # PASS session_id
         )
+
+        # Sanitization: null out any suggested mapping that isn't actually in
+        # its own role's valid-candidate list, rather than trusting the
+        # detection heuristics blindly. Same fix pattern as Finance/Health.
+        for role in ['group', 'y_true', 'y_pred', 'y_prob']:
+            candidate_list = _candidate_columns(df, role)
+            if suggested_mappings.get(role) and suggested_mappings[role] not in candidate_list:
+                print(f"⚠️ Sanitizing invalid '{role}' suggestion: {suggested_mappings[role]} is not a valid candidate for this role")
+                suggested_mappings[role] = None
         
         required_mappings = ['group', 'y_true', 'y_pred']
         missing_required = [m for m in required_mappings if m not in suggested_mappings or not suggested_mappings[m]]
@@ -410,7 +533,7 @@ def hiring_upload_page():
             session[key] = value
         
         # Count detected key features
-        detected_key_features = len([m for m in suggested_mappings.values() if m is not None])
+        detected_key_features = len([k for k in ('group', 'y_true', 'y_pred', 'y_prob') if suggested_mappings.get(k) is not None])
         
         # Check if comparative study is active
         is_comparative_active = bool(session.get('comparative_study_id'))
@@ -429,10 +552,15 @@ def hiring_upload_page():
                 else:
                     comparative_status = "📊 Comparative Study Mode: Target consistency enforced"
         
+        # Build the filtered, role-appropriate dropdown options for the
+        # confirmation page's manual-override UX.
+        column_options = build_column_options(df, suggested_mappings)
+
         return render_template(
             'auto_confirm_hiring.html',
             suggested_mappings=suggested_mappings,
             column_reasoning=column_reasoning,
+            column_options=column_options,
             total_columns=len(columns),
             detected_key_features=detected_key_features,
             filename=file.filename,
@@ -473,6 +601,28 @@ def run_hiring_audit_with_mapping():
     
     try:
         df = pd.read_csv(dataset_path)
+
+        # Apply any manual overrides submitted from the confirmation page's
+        # dropdowns. Each override is re-validated against its role's own
+        # candidate list before being accepted. Note: overriding y_true during
+        # an active comparative study is deliberately still allowed here rather
+        # than blocked -- the existing comparative-consistency check further
+        # below already detects and warns if the resulting target differs from
+        # the registered pre-test target, so this doesn't need special-casing.
+        override_params = {
+            'group': request.args.get('group_col'),
+            'y_true': request.args.get('y_true_col'),
+            'y_pred': request.args.get('y_pred_col'),
+            'y_prob': request.args.get('y_prob_col'),
+        }
+        for role, override_value in override_params.items():
+            if not override_value:
+                continue
+            valid_candidates = _candidate_columns(df, role)
+            if override_value in valid_candidates:
+                column_mapping[role] = override_value
+            else:
+                print(f"⚠️ Ignoring invalid '{role}' override from request: {override_value}")
         
         # Validate required mappings
         required_mappings = ['group', 'y_true', 'y_pred']
@@ -589,7 +739,7 @@ def run_hiring_audit_with_mapping():
         return render_template(
             "result_hiring.html",
             title="Hiring Fairness Audit Completed",
-            message=f"Your hiring dataset was audited successfully using 34 fairness metrics. Test Type: {test_type.replace('_', ' ').title()}",
+            message=f"Your hiring dataset was audited successfully using 25 fairness metrics. Test Type: {test_type.replace('_', ' ').title()}",
             summary=summary_text,
             report_filename=session['report_filename'],
             test_type=test_type,
