@@ -1017,6 +1017,15 @@
             // name unfiltered. Falls back to the full header list (with a
             // warning) if sampling finds no strict-binary column, so the
             // dropdown is never left empty.
+            // Same vocabulary as EDUCATION_KEYWORDS['y_true'] server-side --
+            // used to prioritize genuinely outcome-sounding columns over
+            // an arbitrary binary column that merely happens to appear
+            // first in the file (e.g. an enrollment-status flag).
+            const EDUCATION_YTRUE_KEYWORDS = ['graduation', 'dropout', 'admission', 'performance',
+                'success', 'passed', 'achieved', 'qualified', 'retained', 'promoted', 'completed',
+                'advanced', 'remediated', 'certified', 'placed', 'actual', 'outcome',
+                'target', 'label', 'ground_truth', 'pass_bar', 'bar_pass'];
+
             function computeCandidateTargetColumns(text) {
                 const { headers, rows } = parseSampleRows(text, 1000);
                 const candidates = [];
@@ -1024,7 +1033,12 @@
                     const values = rows.map(r => r[col] !== undefined ? r[col] : '');
                     if (isStrictBinaryColumn(values)) candidates.push(headers[col]);
                 }
-                return { headers, candidates };
+                // Reorder (never exclude) so likely-outcome columns surface
+                // first, without hiding any column that might genuinely be
+                // the right choice.
+                const matched = candidates.filter(c => EDUCATION_YTRUE_KEYWORDS.some(kw => c.toLowerCase().includes(kw)));
+                const unmatched = candidates.filter(c => !matched.includes(c));
+                return { headers, candidates: matched.concat(unmatched) };
             }
 
             // File input handler with intelligent target detection - per Phase 2, Step 4
@@ -1103,8 +1117,11 @@
                         throw new Error(data.error || 'Could not analyze dataset');
                     }
                     
-                    // Auto-fill the hidden target column field - per protocol
-                    autoTargetColumn.value = data.suggested_target;
+                    // Auto-fill the hidden target column field - per protocol.
+                    // Guard against a genuinely null suggestion (honest "I
+                    // don't know") being coerced into the literal string
+                    // "null" when assigned to a form field's .value.
+                    autoTargetColumn.value = data.suggested_target || '';
 
                     // Populate the dropdown for manual override -- filtered
                     // through the client-side sample (same candidates found
@@ -1121,22 +1138,39 @@
                         }
 
                         targetSelect.innerHTML = '';
+                        // Re-add the blank placeholder that the initial
+                        // client-side build has, so a genuinely null
+                        // suggestion leaves nothing selected by default
+                        // (rather than the browser silently defaulting to
+                        // whichever column happens to be first in the list).
+                        const targetBlank = document.createElement('option');
+                        targetBlank.value = '';
+                        targetBlank.textContent = '— select a column —';
+                        targetSelect.appendChild(targetBlank);
                         optionList.forEach(col => {
                             const opt = document.createElement('option');
                             opt.value = col;
                             opt.textContent = col;
-                            if (col === data.suggested_target) opt.selected = true;
+                            if (data.suggested_target && col === data.suggested_target) opt.selected = true;
                             targetSelect.appendChild(opt);
                         });
                         targetWrap.style.display = 'block';
                     }
                     
-                    // Show success message with selected column - per protocol
-                    hintText.innerHTML = 
-                        `✅ Intelligent selection complete! ` +
-                        `Target column: <strong>${data.suggested_target}</strong><br>` +
-                        `<small>Based on ${selectedTestType.replace('_', ' ')} test type` +
-                        (data.intelligent_selection ? ' (intelligent selection)' : '') + '</small>';
+                    // Show success message with selected column - per protocol.
+                    // When suggested_target is genuinely null, say so honestly
+                    // instead of claiming "complete" with a literal "null".
+                    if (data.suggested_target) {
+                        hintText.innerHTML = 
+                            `✅ Intelligent selection complete! ` +
+                            `Target column: <strong>${data.suggested_target}</strong><br>` +
+                            `<small>Based on ${selectedTestType.replace('_', ' ')} test type` +
+                            (data.intelligent_selection ? ' (intelligent selection)' : '') + '</small>';
+                    } else {
+                        hintText.innerHTML =
+                            `⚠️ Could not confidently detect a target column. ` +
+                            `Please select one manually below.`;
+                    }
                     
                 } catch (err) {
                     hintText.innerHTML = 
