@@ -1017,10 +1017,6 @@
             // name unfiltered. Falls back to the full header list (with a
             // warning) if sampling finds no strict-binary column, so the
             // dropdown is never left empty.
-            // Same vocabulary as EDUCATION_KEYWORDS['y_true'] server-side --
-            // used to prioritize genuinely outcome-sounding columns over
-            // an arbitrary binary column that merely happens to appear
-            // first in the file (e.g. an enrollment-status flag).
             const EDUCATION_YTRUE_KEYWORDS = ['graduation', 'dropout', 'admission', 'performance',
                 'success', 'passed', 'achieved', 'qualified', 'retained', 'promoted', 'completed',
                 'advanced', 'remediated', 'certified', 'placed', 'actual', 'outcome',
@@ -1033,9 +1029,6 @@
                     const values = rows.map(r => r[col] !== undefined ? r[col] : '');
                     if (isStrictBinaryColumn(values)) candidates.push(headers[col]);
                 }
-                // Reorder (never exclude) so likely-outcome columns surface
-                // first, without hiding any column that might genuinely be
-                // the right choice.
                 const matched = candidates.filter(c => EDUCATION_YTRUE_KEYWORDS.some(kw => c.toLowerCase().includes(kw)));
                 const unmatched = candidates.filter(c => !matched.includes(c));
                 return { headers, candidates: matched.concat(unmatched) };
@@ -1117,10 +1110,7 @@
                         throw new Error(data.error || 'Could not analyze dataset');
                     }
                     
-                    // Auto-fill the hidden target column field - per protocol.
-                    // Guard against a genuinely null suggestion (honest "I
-                    // don't know") being coerced into the literal string
-                    // "null" when assigned to a form field's .value.
+                    // Auto-fill the hidden target column field - per protocol
                     autoTargetColumn.value = data.suggested_target || '';
 
                     // Populate the dropdown for manual override -- filtered
@@ -1138,11 +1128,6 @@
                         }
 
                         targetSelect.innerHTML = '';
-                        // Re-add the blank placeholder that the initial
-                        // client-side build has, so a genuinely null
-                        // suggestion leaves nothing selected by default
-                        // (rather than the browser silently defaulting to
-                        // whichever column happens to be first in the list).
                         const targetBlank = document.createElement('option');
                         targetBlank.value = '';
                         targetBlank.textContent = '— select a column —';
@@ -1157,9 +1142,6 @@
                         targetWrap.style.display = 'block';
                     }
                     
-                    // Show success message with selected column - per protocol.
-                    // When suggested_target is genuinely null, say so honestly
-                    // instead of claiming "complete" with a literal "null".
                     if (data.suggested_target) {
                         hintText.innerHTML = 
                             `✅ Intelligent selection complete! ` +
@@ -1170,7 +1152,7 @@
                         hintText.innerHTML =
                             `⚠️ Could not confidently detect a target column. ` +
                             `Please select one manually below.`;
-                    }
+                    }autoTargetColumn.value = data.suggested_target || '';
                     
                 } catch (err) {
                     hintText.innerHTML = 
