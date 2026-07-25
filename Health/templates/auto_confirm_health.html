@@ -574,7 +574,6 @@
                 {% endif %}
 
                 <form action="{{ url_for('health.run_health_audit_with_mapping') }}" method="get" id="healthAuditRunForm">
-                    <input type="hidden" name="filename" value="{{ filename }}">
                     <button type="submit" class="run-btn" {% if not column_options.y_true or not column_options.y_pred %}disabled{% endif %}>
                         <i class="fas fa-play-circle"></i> RUN HEALTH FAIRNESS AUDIT
                     </button>

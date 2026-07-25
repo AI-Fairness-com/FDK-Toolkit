@@ -613,7 +613,6 @@
             text-align: center;
             font-size: 0.9em;
             color: #2e7d32;
-            display: none;
         }
 
         .unified-system-notice i {
@@ -932,30 +931,128 @@
                 }
             }
             
-            // Reads just the header row of the chosen file client-side, so the
-            // target-column dropdown can be populated immediately without
-            // depending on what the server's detect-columns response returns.
-            function populateTargetColumnOptions(file) {
-                return new Promise((resolve) => {
+            // §3a — client-side statistical filter (quote-aware CSV parsing, strict-binary detection)
+            function splitCsvRows(text) {
+                const rows = [];
+                let row = [];
+                let field = '';
+                let inQuotes = false;
+                for (let i = 0; i < text.length; i++) {
+                    const c = text[i];
+                    if (inQuotes) {
+                        if (c === '"') {
+                            if (text[i + 1] === '"') { field += '"'; i++; }
+                            else { inQuotes = false; }
+                        } else {
+                            field += c;
+                        }
+                    } else {
+                        if (c === '"') inQuotes = true;
+                        else if (c === ',') { row.push(field); field = ''; }
+                        else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+                        else if (c === '\r') { /* skip, \n follows */ }
+                        else field += c;
+                    }
+                }
+                if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
+                return rows;
+            }
+
+            function parseSampleRows(fileSlice) {
+                return new Promise((resolve, reject) => {
                     const reader = new FileReader();
-                    reader.onload = function (evt) {
-                        const firstLine = evt.target.result.split(/\r?\n/)[0] || '';
-                        const headers = firstLine.split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-                        autoTargetColumn.innerHTML = '';
-                        const blankOpt = document.createElement('option');
-                        blankOpt.value = '';
-                        blankOpt.textContent = '— auto-detect —';
-                        autoTargetColumn.appendChild(blankOpt);
-                        headers.forEach(h => {
-                            const opt = document.createElement('option');
-                            opt.value = h;
-                            opt.textContent = h;
-                            autoTargetColumn.appendChild(opt);
-                        });
-                        targetColumnWrapper.style.display = 'block';
-                        resolve();
+                    reader.onload = () => {
+                        try {
+                            const text = reader.result;
+                            let rows = splitCsvRows(text);
+                            if (rows.length === 0) return resolve({ header: [], data: [] });
+                            const header = rows[0];
+                            let dataRows = rows.slice(1);
+                            if (dataRows.length > 0) {
+                                const last = dataRows[dataRows.length - 1];
+                                if (last.length !== header.length) dataRows = dataRows.slice(0, -1);
+                            }
+                            if (dataRows.length > 1000) dataRows = dataRows.slice(0, 1000);
+                            resolve({ header, data: dataRows });
+                        } catch (err) {
+                            reject(err);
+                        }
                     };
-                    reader.readAsText(file.slice(0, 65536)); // header row only, no need to read the whole file
+                    reader.onerror = () => reject(reader.error);
+                    reader.readAsText(fileSlice);
+                });
+            }
+
+            function isStrictBinaryColumn(values) {
+                let sawValue = false;
+                for (const v of values) {
+                    const trimmed = (v ?? '').trim();
+                    if (trimmed === '') continue;
+                    sawValue = true;
+                    if (trimmed !== '0' && trimmed !== '1') return false;
+                }
+                return sawValue;
+            }
+
+            function computeCandidateTargetColumns(header, dataRows) {
+                const candidates = [];
+                for (let colIdx = 0; colIdx < header.length; colIdx++) {
+                    const values = dataRows.map(r => r[colIdx]);
+                    if (isStrictBinaryColumn(values)) candidates.push(header[colIdx]);
+                }
+                return candidates;
+            }
+
+            // Samples the chosen file client-side (quote-aware, up to ~1000 rows)
+            // and filters the target-column dropdown down to genuinely binary
+            // columns, so the dropdown isn't just every raw header from the file.
+            // Falls back to the full unfiltered header list (with a warning) if
+            // no binary column is found in the sample. Resolves with whether it
+            // fell back, so the caller can surface that after its own hint updates.
+            function populateTargetColumnOptions(file) {
+                const slice = file.slice(0, 500000);
+                return parseSampleRows(slice).then(({ header, data }) => {
+                    const candidates = computeCandidateTargetColumns(header, data);
+                    const fellBack = candidates.length === 0;
+                    const columns = fellBack ? header : candidates;
+
+                    autoTargetColumn.innerHTML = '';
+                    const blankOpt = document.createElement('option');
+                    blankOpt.value = '';
+                    blankOpt.textContent = '— auto-detect —';
+                    autoTargetColumn.appendChild(blankOpt);
+                    columns.forEach(h => {
+                        const opt = document.createElement('option');
+                        opt.value = h;
+                        opt.textContent = h;
+                        autoTargetColumn.appendChild(opt);
+                    });
+                    targetColumnWrapper.style.display = 'block';
+
+                    return { fellBack };
+                }).catch(() => {
+                    // If sampling fails for any reason, fall back to a plain header-row read
+                    return new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = function (evt) {
+                            const firstLine = evt.target.result.split(/\r?\n/)[0] || '';
+                            const headers = firstLine.split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+                            autoTargetColumn.innerHTML = '';
+                            const blankOpt = document.createElement('option');
+                            blankOpt.value = '';
+                            blankOpt.textContent = '— auto-detect —';
+                            autoTargetColumn.appendChild(blankOpt);
+                            headers.forEach(h => {
+                                const opt = document.createElement('option');
+                                opt.value = h;
+                                opt.textContent = h;
+                                autoTargetColumn.appendChild(opt);
+                            });
+                            targetColumnWrapper.style.display = 'block';
+                            resolve({ fellBack: true });
+                        };
+                        reader.readAsText(file.slice(0, 65536));
+                    });
                 });
             }
 
@@ -972,7 +1069,7 @@
 
                 // Populate the target-column dropdown from the file's own header
                 // row immediately, independent of the server call below.
-                await populateTargetColumnOptions(file);
+                const { fellBack: columnsFellBack } = await populateTargetColumnOptions(file);
                 
                 // Get selected test type
                 const selectedTestType = document.querySelector('input[name="test_type"]:checked').value;
@@ -998,7 +1095,18 @@
                         throw new Error(data.error || 'Could not analyze healthcare dataset');
                     }
                     
-                    // Auto-fill the hidden target column field with intelligent suggestion
+                    // Auto-fill the hidden target column field with intelligent suggestion.
+                    // If the client-side sample filtered it out, add it back as an
+                    // option so the intelligent suggestion is always selectable.
+                    if (data.suggested_target) {
+                        const alreadyPresent = Array.from(autoTargetColumn.options).some(o => o.value === data.suggested_target);
+                        if (!alreadyPresent) {
+                            const opt = document.createElement('option');
+                            opt.value = data.suggested_target;
+                            opt.textContent = data.suggested_target;
+                            autoTargetColumn.appendChild(opt);
+                        }
+                    }
                     autoTargetColumn.value = data.suggested_target || '';
                     
                     // Show success message with selected column
@@ -1019,6 +1127,10 @@
                         `⚠️ Could not auto-select target: ${err.message}. ` +
                         `The system will use default column detection.`;
                     autoTargetColumn.value = '';
+                }
+
+                if (columnsFellBack) {
+                    hintText.innerHTML += '<br><small>Could not confidently detect binary columns in a quick sample — showing all columns. You can override the intelligent suggestion if needed.</small>';
                 }
             });
             
