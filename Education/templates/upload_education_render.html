@@ -1,4 +1,3 @@
-<!-- wp:html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -768,7 +767,18 @@
                             </div>
                             
                             <!-- UNIFIED PROTOCOL: Hidden target column field - Phase 2, Step 3 -->
-                            <input type="hidden" name="target_column" id="autoTargetColumn" value="">
+                            <input type="hidden" name="target_column_fallback" id="autoTargetColumn" value="">
+
+                            <!-- TARGET COLUMN SELECTOR (manual override, matches Finance's pattern) -->
+                            <div id="targetWrap" style="display: none;">
+                                <div style="margin-bottom: 8px; font-weight: 600; color: #2c3e50;">
+                                    Target column (intelligent suggestion selected)
+                                </div>
+                                <select name="target_column" id="targetColumn"></select>
+                                <div id="targetHint" style="margin-top: 8px; color: #7f8c8d; font-size: 0.95em;">
+                                    You can override the intelligent suggestion if needed
+                                </div>
+                            </div>
                         </div>
 
                         <div class="file-input-wrapper">
@@ -850,7 +860,7 @@
             <div class="footer-tile">
                 <div class="footer-tile-icon" aria-hidden="true"><i class="fas fa-wand-magic-sparkles"></i></div>
                 <div class="footer-tile-title">Intelligent Column Detection</div>
-                <div class="footer-tile-text">FDK automatically identifies the appropriate target column from your dataset based on the selected test type — no manual configuration required.</div>
+                <div class="footer-tile-text">FDK automatically identifies the appropriate target column from your dataset based on the selected test type, and lets you review or adjust the selection before running the audit.</div>
             </div>
             <div class="footer-tile">
                 <div class="footer-tile-icon" aria-hidden="true"><i class="fas fa-user-graduate"></i></div>
@@ -885,8 +895,24 @@
             const autoTargetColumn = document.getElementById('autoTargetColumn');
             const testTypeHint = document.getElementById('testTypeHint');
             const hintText = document.getElementById('hintText');
-            
+            const targetWrap = document.getElementById('targetWrap');
+            const targetSelect = document.getElementById('targetColumn');
+            const targetHint = document.getElementById('targetHint');
+
+            // Populated once per uploaded file by computeCandidateTargetColumns()
+            // below, then reused to filter the server's /api/detect-columns
+            // response so the dropdown stays consistent either way.
+            let sampledAllHeaders = [];
+            let sampledCandidateColumns = [];
+
             const testTypeRadios = document.querySelectorAll('input[name="test_type"]');
+
+            function resetTargetUI() {
+                targetSelect.innerHTML = '';
+                targetHint.textContent = 'You can override the intelligent suggestion if needed';
+                targetWrap.style.display = 'none';
+            }
+
             
             // Test type radio button handlers - per Phase 2, Step 4
             testTypeRadios.forEach(radio => {
@@ -930,7 +956,115 @@
                 }
             }
             
+            // ---- Minimal quote-aware CSV row splitter ----
+            function splitCsvRows(text) {
+                const rows = [];
+                let field = '', row = [], inQuotes = false;
+                for (let i = 0; i < text.length; i++) {
+                    const c = text[i];
+                    if (inQuotes) {
+                        if (c === '"') {
+                            if (text[i + 1] === '"') { field += '"'; i++; }
+                            else inQuotes = false;
+                        } else field += c;
+                    } else {
+                        if (c === '"') inQuotes = true;
+                        else if (c === ',') { row.push(field); field = ''; }
+                        else if (c === '\n' || c === '\r') {
+                            if (c === '\r' && text[i + 1] === '\n') i++;
+                            row.push(field); field = '';
+                            rows.push(row); row = [];
+                        } else field += c;
+                    }
+                }
+                if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
+                return rows;
+            }
+
+            // Parses a byte-sliced sample of the file into headers + up to
+            // maxRows data rows. Drops the final row if its field count
+            // doesn't match the header -- a sliced chunk almost always
+            // truncates mid-row, and a partial row would corrupt the
+            // per-column value counts below.
+            function parseSampleRows(text, maxRows) {
+                const allRows = splitCsvRows(text);
+                if (allRows.length === 0) return { headers: [], rows: [] };
+                const headers = allRows[0].map(h => h.trim());
+                let dataRows = allRows.slice(1, 1 + maxRows);
+                if (dataRows.length && dataRows[dataRows.length - 1].length !== headers.length) {
+                    dataRows = dataRows.slice(0, -1);
+                }
+                return { headers, rows: dataRows };
+            }
+
+            // Mirrors the server's strict binary check (issubset({0,1})):
+            // every non-empty sampled value must parse to exactly 0 or 1.
+            function isStrictBinaryColumn(values) {
+                let sawAny = false;
+                for (const raw of values) {
+                    const v = (raw || '').trim();
+                    if (v === '') continue;
+                    sawAny = true;
+                    const n = Number(v);
+                    if (Number.isNaN(n) || (n !== 0 && n !== 1)) return false;
+                }
+                return sawAny;
+            }
+
+            // Samples real data rows (not just the header) and filters to
+            // columns that are plausible targets -- fixes the known gap
+            // where the upload page previously listed every raw column
+            // name unfiltered. Falls back to the full header list (with a
+            // warning) if sampling finds no strict-binary column, so the
+            // dropdown is never left empty.
+            function computeCandidateTargetColumns(text) {
+                const { headers, rows } = parseSampleRows(text, 1000);
+                const candidates = [];
+                for (let col = 0; col < headers.length; col++) {
+                    const values = rows.map(r => r[col] !== undefined ? r[col] : '');
+                    if (isStrictBinaryColumn(values)) candidates.push(headers[col]);
+                }
+                return { headers, candidates };
+            }
+
             // File input handler with intelligent target detection - per Phase 2, Step 4
+            // Samples real data rows (not just the header line) client-side
+            // so the dropdown is populated with plausible target columns
+            // immediately, regardless of whether the /api/detect-columns
+            // call below succeeds or fails.
+            function populateTargetDropdownFromHeader(file) {
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = function (evt) {
+                        const { headers, candidates } = computeCandidateTargetColumns(evt.target.result);
+                        sampledAllHeaders = headers;
+                        sampledCandidateColumns = candidates;
+
+                        const optionList = candidates.length ? candidates : headers;
+
+                        targetSelect.innerHTML = '';
+                        const targetBlank = document.createElement('option');
+                        targetBlank.value = '';
+                        targetBlank.textContent = '— select a column —';
+                        targetSelect.appendChild(targetBlank);
+                        optionList.forEach(h => {
+                            const opt = document.createElement('option');
+                            opt.value = h;
+                            opt.textContent = h;
+                            targetSelect.appendChild(opt);
+                        });
+                        targetWrap.style.display = 'block';
+
+                        targetHint.textContent = candidates.length
+                            ? 'Showing likely binary target columns only. You can override the intelligent suggestion if needed.'
+                            : 'Could not identify a likely binary column from a sample of this file -- showing all columns.';
+
+                        resolve();
+                    };
+                    reader.readAsText(file.slice(0, 500000)); // sampled rows, not just the header
+                });
+            }
+
             fileInput.addEventListener('change', async function (e) {
                 if (e.target.files.length === 0) {
                     fileName.textContent = '';
@@ -940,6 +1074,10 @@
                 const file = e.target.files[0];
                 fileName.textContent = 'Selected: ' + file.name;
                 fileName.style.color = '#27ae60';
+
+                // Populate both dropdowns from the file's own header row
+                // immediately -- independent of the server call below.
+                await populateTargetDropdownFromHeader(file);
                 
                 // Get selected test type - per protocol
                 const selectedTestType = document.querySelector('input[name="test_type"]:checked').value;
@@ -967,6 +1105,31 @@
                     
                     // Auto-fill the hidden target column field - per protocol
                     autoTargetColumn.value = data.suggested_target;
+
+                    // Populate the dropdown for manual override -- filtered
+                    // through the client-side sample (same candidates found
+                    // by computeCandidateTargetColumns above), so the list
+                    // stays consistent regardless of what this endpoint
+                    // itself returns. The server's own suggested_target is
+                    // always included even if sampling missed it.
+                    if (data.columns && Array.isArray(data.columns)) {
+                        let optionList = sampledCandidateColumns.length
+                            ? sampledCandidateColumns.filter(c => data.columns.includes(c))
+                            : data.columns;
+                        if (data.suggested_target && !optionList.includes(data.suggested_target)) {
+                            optionList = [data.suggested_target, ...optionList];
+                        }
+
+                        targetSelect.innerHTML = '';
+                        optionList.forEach(col => {
+                            const opt = document.createElement('option');
+                            opt.value = col;
+                            opt.textContent = col;
+                            if (col === data.suggested_target) opt.selected = true;
+                            targetSelect.appendChild(opt);
+                        });
+                        targetWrap.style.display = 'block';
+                    }
                     
                     // Show success message with selected column - per protocol
                     hintText.innerHTML = 
@@ -980,11 +1143,23 @@
                         `⚠️ Could not auto-select target: ${err.message}. ` +
                         `You may need to manually specify columns.`;
                     autoTargetColumn.value = '';
+
+                    // Still show the dropdown on failure so the user isn't stuck
+                    targetHint.textContent = 'Error: ' + err.message + ' - please manually select the target column';
+                    targetWrap.style.display = 'block';
                 }
+            });
+
+            // Manual dropdown override
+            targetSelect.addEventListener('change', function() {
+                const manualSelection = this.value;
+                autoTargetColumn.value = manualSelection;
+                hintText.innerHTML = `⚠️ Manual override: <strong>${manualSelection}</strong> (overrides intelligent suggestion)`;
             });
             
             // Initialize hint - per protocol
             updateTestTypeHint('pre_implementation');
+            resetTargetUI();
             
             // Initialize label container active states
             document.querySelectorAll('.test-type-option').forEach(container => {
@@ -1075,4 +1250,3 @@
     </script>
 </body>
 </html>
-<!-- /wp:html -->
