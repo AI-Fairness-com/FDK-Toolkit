@@ -568,7 +568,6 @@
                 {% endif %}
 
                 <form action="{{ url_for('education.run_education_audit_with_mapping') }}" method="get" id="educationAuditRunForm">
-                    <input type="hidden" name="filename" value="{{ filename }}">
                     <button type="submit" class="run-btn" {% if not column_options.y_true or not column_options.y_pred %}disabled{% endif %}>
                         <i class="fas fa-play-circle"></i> RUN EDUCATION EQUITY AUDIT
                     </button>
