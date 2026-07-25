@@ -87,29 +87,49 @@ def convert_numpy_types(obj):
         return [convert_numpy_types(item) for item in obj]
     return obj
 
-def validate_educational_dataset(df: pd.DataFrame) -> Tuple[bool, str]:
-    """Comprehensive dataset validation for educational fairness audit"""
+def validate_educational_dataset(df: pd.DataFrame) -> Tuple[bool, str, pd.DataFrame]:
+    """Comprehensive dataset validation for educational fairness audit.
+    Returns (is_valid, message, df) -- df may have undersized subgroups
+    soft-excluded rather than causing outright rejection of the whole dataset."""
     required_cols = ['group', 'y_true', 'y_pred']
     missing_cols = [col for col in required_cols if col not in df.columns]
     if missing_cols:
-        return False, f"Missing required columns: {missing_cols}"
+        return False, f"Missing required columns: {missing_cols}", df
     
     # Sample size validation
     if len(df) < 100:
-        return False, f"Insufficient sample size: {len(df)} < 100"
+        return False, f"Insufficient sample size: {len(df)} < 100", df
 
     # Group diversity validation
     groups = df['group'].unique()
     if len(groups) < 2:
-        return False, "Need at least 2 groups for fairness analysis"
+        return False, "Need at least 2 groups for fairness analysis", df
     
-    # Subgroup size validation WITH LOGGING
+    # Subgroup size handling: soft-exclude undersized groups rather than
+    # rejecting the whole dataset outright. A group below 20 samples can't
+    # support a reliable statistic on its own, but a real-world dataset
+    # (which may naturally have some small-but-genuine demographic groups)
+    # shouldn't be thrown away entirely because of it.
     group_counts = df['group'].value_counts()
     print(f"📊 Subgroup sizes: {dict(group_counts)}")
     print(f"✅ Smallest subgroup: {group_counts.min()} samples")
-    
-    if group_counts.min() < 20:
-        return False, f"Smallest subgroup has {group_counts.min()} samples (< 20)"
+
+    exclusion_warning = None
+    small_groups = group_counts[group_counts < 20]
+    if len(small_groups) > 0:
+        exclusion_warning = (
+            f"Excluded {len(small_groups)} subgroup(s) below the 20-sample minimum "
+            f"required for statistical validity: {small_groups.to_dict()}. "
+            f"Metrics are computed only on the remaining, adequately-sized groups."
+        )
+        df = df[~df['group'].isin(small_groups.index)].copy()
+
+        remaining_groups = df['group'].unique()
+        if len(remaining_groups) < 2:
+            return False, (
+                "Need at least 2 groups with 20+ samples each for fairness analysis "
+                "after excluding undersized subgroups."
+            ), df
     
     # ENHANCED DATA QUALITY CHECKS WITH DEBUGGING
     print(f"\n🔍 DEBUG: Checking for missing values...")
@@ -123,9 +143,23 @@ def validate_educational_dataset(df: pd.DataFrame) -> Tuple[bool, str]:
         if len(problematic_rows) > 0:
             print(f"   Sample of problematic data:")
             print(problematic_rows[required_cols].head(3))
-        return False, f"Missing values detected in required columns: {null_counts[null_counts > 0].to_dict()}"
+        return False, f"Missing values detected in required columns: {null_counts[null_counts > 0].to_dict()}", df
+
+    # Independent last-line-of-defense check: y_true and y_pred must be
+    # genuinely binary {0,1}, regardless of what the upstream column-mapping
+    # step decided. Deliberately redundant with the detection-time checks in
+    # fdk_education.py, so a single bad mapping upstream can't silently
+    # corrupt every downstream metric.
+    for col in ['y_true', 'y_pred']:
+        col_vals = set(df[col].dropna().unique())
+        if not col_vals.issubset({0, 1}):
+            return False, (
+                f"Column mapped to '{col}' is not binary (found values: "
+                f"{sorted(col_vals)[:10]}{'...' if len(col_vals) > 10 else ''}). "
+                f"Fairness metrics require a genuine binary outcome/prediction column."
+            ), df
     
-    return True, "Dataset validated successfully"
+    return True, (exclusion_warning or "Dataset validated successfully"), df
 
 def calculate_confusion_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
     """Calculate comprehensive confusion matrix metrics"""
@@ -690,46 +724,45 @@ def add_confidence_intervals(metrics: Dict, df: pd.DataFrame, metric_type: str) 
     return new_metrics
 
 def calculate_composite_fairness_score(metrics: Dict) -> float:
-    """Calculate overall composite fairness score (0-1, higher is better)"""
-    critical_metrics = [
-        metrics.get('statistical_parity_difference', 0),
-        metrics.get('equal_opportunity_difference', 0),
-        metrics.get('average_odds_difference', 0),
-        metrics.get('disparate_impact_ratio', 1),
-        metrics.get('worst_case_subgroup_performance', 0),
-        metrics.get('expected_calibration_error', 0),
-        metrics.get('individual_fairness_consistency', 0.5),
-        metrics.get('fairness_drift_index', 1.0)
+    """
+    Calculate overall composite fairness score (0-1, higher is better).
+
+    Reflects pure cross-group disparity and reliability only.
+    worst_case_subgroup_performance (the absolute performance of whichever
+    single group scores worst) was removed from this formula -- it measures
+    whether the model is accurate, not whether it treats groups equally, and
+    could drag the score down for a model that is uniformly mediocre across
+    every group with zero actual disparity between them.
+
+    Weights are renormalized over only the components genuinely present
+    this run -- a metric absent from `metrics` (e.g. individual_fairness_
+    consistency when nearest-neighbor comparison couldn't run) must NOT be
+    conflated with a metric that was computed and genuinely came out at its
+    "neutral" value. The old `.get(name, default)` pattern silently treated
+    every missing metric as moderately-fair-by-default and kept its full
+    weight in the average, masking genuinely poor scores whenever a
+    component happened to be unavailable.
+    """
+    component_specs = [
+        ('statistical_parity_difference', lambda v: max(0, 1 - (v / 0.1)), 0.15),
+        ('equal_opportunity_difference', lambda v: max(0, 1 - (v / 0.1)), 0.15),
+        ('average_odds_difference', lambda v: max(0, 1 - (v / 0.1)), 0.10),
+        ('disparate_impact_ratio', lambda v: min(1, v / 0.8), 0.10),
+        ('expected_calibration_error', lambda v: max(0, 1 - (v / 0.1)), 0.10),
+        ('individual_fairness_consistency', lambda v: v, 0.15),
+        ('fairness_drift_index', lambda v: v, 0.10),
     ]
-    
-    # Normalize and weight metrics
-    normalized_scores = []
-    
-    # For difference metrics (lower is better)
-    for metric in critical_metrics[:3]:
-        normalized = max(0, 1 - (metric / 0.1))
-        normalized_scores.append(normalized)
-    
-    # For ratio metrics (higher is better)
-    normalized_scores.append(min(1, critical_metrics[3] / 0.8))
-    
-    # For performance metrics (higher is better)
-    normalized_scores.append(critical_metrics[4])
-    
-    # For calibration error (lower is better)
-    normalized_scores.append(max(0, 1 - (critical_metrics[5] / 0.1)))
-    
-    # For individual fairness (higher is better)
-    normalized_scores.append(critical_metrics[6])
-    
-    # For drift index (higher is better)
-    normalized_scores.append(critical_metrics[7])
-    
-    # Weighted average
-    weights = [0.15, 0.15, 0.10, 0.10, 0.15, 0.10, 0.15, 0.10]
-    composite_score = sum(score * weight for score, weight in zip(normalized_scores, weights))
-    
-    return float(composite_score)
+
+    weighted_sum = 0.0
+    total_weight = 0.0
+    for name, normalize_fn, weight in component_specs:
+        if name in metrics and metrics[name] is not None:
+            weighted_sum += normalize_fn(metrics[name]) * weight
+            total_weight += weight
+
+    if total_weight > 0:
+        return float(weighted_sum / total_weight)
+    return 0.0
 
 # ================================================================
 # MAIN PIPELINE EXECUTION
@@ -765,7 +798,7 @@ class EducationFairnessPipeline:
             print(f"   Cleaned shape: {df_clean.shape}")
             
             # STEP 2: VALIDATION ON CLEANED DATA
-            is_valid, validation_msg = validate_educational_dataset(df_clean)
+            is_valid, validation_msg, df_clean = validate_educational_dataset(df_clean)
             if not is_valid:
                 raise ValueError(f"Dataset validation failed: {validation_msg}")
             
@@ -797,6 +830,9 @@ class EducationFairnessPipeline:
                 **individual_metrics, **temporal_metrics, **explainability_metrics,
                 **robustness_metrics
             }
+
+            if "Excluded" in validation_msg:
+                all_metrics['data_quality_warnings'] = [validation_msg]
             
             # Calculate composite score
             composite_score = calculate_composite_fairness_score(all_metrics)
@@ -809,7 +845,10 @@ class EducationFairnessPipeline:
             # Build comprehensive results
             results = {
                 "domain": "education",
-                "metrics_calculated": 26,
+                "metrics_calculated": len([
+                    k for k, v in all_metrics.items()
+                    if k in {name for cat in EDUCATION_METRICS_CONFIG.values() for name in cat} and v is not None
+                ]),
                 "metric_categories": EDUCATION_METRICS_CONFIG,
                 "fairness_metrics": all_metrics,
                 "validation": {

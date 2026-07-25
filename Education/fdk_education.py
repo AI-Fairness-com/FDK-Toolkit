@@ -3,6 +3,7 @@
 # ================================================================
 
 import os
+import re
 import json
 import pandas as pd
 import numpy as np
@@ -28,6 +29,28 @@ def _is_binary_column(series):
     except Exception:
         return False
 
+_TIMESTAMP_KEYWORDS = ['timestamp', 'date', 'decision_date', 'time', 'datetime']
+
+def _timestamp_keyword_match(col_lower):
+    """
+    Token-aware match for timestamp-ish column names. 'time' and 'date'
+    are short, generic dictionary words -- a raw substring check falsely
+    matches columns like 'fulltime'/'parttime' (verified bug: pd.to_datetime
+    doesn't raise on a 0/1 integer column, it silently treats the values as
+    1970-epoch nanoseconds, so the false match went undetected). This splits
+    on non-alphanumeric separators and requires a keyword to match a whole
+    token (or contiguous token sequence, for multi-word keywords like
+    'decision_date'), consistent with this dataset's snake_case naming.
+    """
+    tokens = [t for t in re.split(r'[^a-z0-9]+', col_lower) if t]
+    for keyword in _TIMESTAMP_KEYWORDS:
+        kw_tokens = keyword.split('_')
+        n = len(kw_tokens)
+        for i in range(len(tokens) - n + 1):
+            if tokens[i:i + n] == kw_tokens:
+                return True
+    return False
+
 # FIX: Import pipeline with relative import
 from .fdk_education_pipeline import run_pipeline
 
@@ -46,7 +69,7 @@ os.makedirs(REPORT_FOLDER, exist_ok=True)
 # ------------------------------------------------
 EDUCATION_KEYWORDS = {
     'group': ['student_id', 'school', 'district', 'demographic', 'cohort', 'program',
-              'track', 'background', 'ethnicity', 'gender', 'socioeconomic', 
+              'track', 'background', 'ethnicity', 'race', 'gender', 'socioeconomic', 
               'disability', 'ELL', 'special_ed', 'category', 'segment', 'protected_attribute'],
     'y_true': ['graduation', 'dropout', 'admission', 'performance', 'success', 
                'passed', 'achieved', 'qualified', 'retained', 'promoted', 'completed',
@@ -63,7 +86,7 @@ EDUCATION_KEYWORDS = {
 # ------------------------------------------------
 # Unified Education Auto-Detection with FDK Integration
 # ------------------------------------------------
-def detect_education_column_mappings(df, columns, test_type='pre_implementation', user_target=None):
+def detect_education_column_mappings(df, columns, test_type='pre_implementation', user_target=None, user_group=None):
     """
     Unified column detection with FDK intelligent system integration.
     Priority: FDK Intelligent > User Override > Domain-specific detection
@@ -71,6 +94,13 @@ def detect_education_column_mappings(df, columns, test_type='pre_implementation'
     suggestions = {'group': None, 'y_true': None, 'y_pred': None, 'y_prob': None, 'timestamp': None}
     reasoning = {}
     intelligent_suggestion = None
+
+    # USER OVERRIDE FOR GROUP (applied before any auto-detection, same
+    # priority pattern as the existing y_true override below)
+    if user_group and user_group in df.columns:
+        suggestions['group'] = user_group
+        reasoning[user_group] = "✅ USER MANUAL SELECTION (group column)"
+        print(f"🎯 User overrides group to: {user_group}")
     
     # Initialize reasoning for all columns
     for col in columns:
@@ -156,9 +186,15 @@ def detect_education_column_mappings(df, columns, test_type='pre_implementation'
 
         # TIMESTAMP: optional column enabling temporal fairness metrics
         if not suggestions.get('timestamp'):
-            if any(keyword in col_lower for keyword in ['timestamp', 'date', 'decision_date', 'time', 'datetime']):
+            if _timestamp_keyword_match(col_lower):
                 try:
-                    pd.to_datetime(df[col], errors='raise')
+                    parsed = pd.to_datetime(df[col], errors='raise')
+                    # Second guard: a real timestamp column shouldn't collapse
+                    # entirely into 1970-ish values -- that's the signature of
+                    # pandas silently treating small integers as epoch
+                    # nanoseconds rather than genuine dates.
+                    if parsed.dropna().dt.year.min() < 1971:
+                        raise ValueError("parsed to degenerate epoch dates, not real timestamps")
                     suggestions['timestamp'] = col
                     reasoning[col] = "Detected as a parseable date/time column for temporal fairness metrics"
                     continue
@@ -175,23 +211,23 @@ def detect_education_column_mappings(df, columns, test_type='pre_implementation'
         
         # GROUP fallback: Categorical columns
         if not suggestions['group']:
-            if col_data.dtype == 'object' or (col_data.nunique() <= 20 and col_data.nunique() > 1):
+            if 1 < col_data.nunique() <= 20:
                 suggestions['group'] = col
                 reasoning[col] = "Statistical fallback: Categorical groups (2-20 unique values)"
                 continue
                 
-        # Y_TRUE fallback: Binary columns
+        # Y_TRUE fallback: genuinely binary columns only
         if not suggestions['y_true']:
-            if col_data.dtype in ['int64', 'float64'] and len(unique_vals) == 2:
+            if col_data.dtype in ['int64', 'float64'] and _is_binary_column(col_data):
                 if col != suggestions['y_pred']:
                     suggestions['y_true'] = col
                     reasoning[col] = "Statistical fallback: Binary outcomes (2 unique values)"
                     continue
                     
-        # Y_PRED fallback: Binary columns (different from y_true)
+        # Y_PRED fallback: genuinely binary columns only (different from y_true)
         if not suggestions['y_pred']:
             if (col != suggestions['y_true'] and col_data.dtype in ['int64', 'float64'] 
-                and len(unique_vals) == 2):
+                and _is_binary_column(col_data)):
                 suggestions['y_pred'] = col
                 reasoning[col] = "Statistical fallback: Binary predictions (2 unique values)"
                 continue
@@ -199,13 +235,131 @@ def detect_education_column_mappings(df, columns, test_type='pre_implementation'
         # Y_PROB fallback: Probability range columns
         if not suggestions['y_prob']:
             if col_data.dtype in ['float64', 'float32']:
-                if len(unique_vals) > 2 and (col_data.between(0, 1).all() or (col_data.min() >= 0 and col_data.max() <= 1)):
+                non_null_vals = col_data.dropna().unique()
+                # Require genuine continuity in the non-missing values -- a binary
+                # {0,1} column with a few missing values would otherwise falsely
+                # look "continuous" (NaN counts as an extra "unique" value, and
+                # min()/max() silently skip NaN, so a 0/1 column trivially passes
+                # a naive 0-1 range check).
+                if len(non_null_vals) > 2 and col_data.dropna().between(0, 1).all():
                     suggestions['y_prob'] = col
                     reasoning[col] = "Statistical fallback: Probability scores (0-1 range)"
                     continue
     
     # Final validation and return
     return suggestions, reasoning, intelligent_suggestion
+
+# ================================================================
+# No-Code Dropdown Support (ported from Finance/Health/Hiring/Business/
+# Governance/Justice reference implementation) -- powers the
+# confirmation-page manual-override UX. Uses the existing
+# _is_binary_column helper for the strict {0,1} convention.
+# ================================================================
+
+def _describe_column(df, col, role=None):
+    """
+    Plain-language, jargon-free description of a candidate column, for
+    display next to each dropdown option on the confirmation page.
+    `role` matters: for group/target/prediction, "every value is unique"
+    means "this is an ID column, not usable." For probability, every
+    value being distinct is completely normal.
+    """
+    series = df[col]
+    n_unique = series.nunique()
+    n_total = len(series)
+
+    if role == 'y_prob':
+        vmin, vmax = series.min(), series.max()
+        return f"{col} — continuous values ranging {vmin:.3f} to {vmax:.3f}"
+
+    if n_unique == n_total:
+        return f"{col} — every value is unique (likely an ID column, not usable here)"
+
+    if series.dtype == object or n_unique <= 10:
+        top_vals = series.dropna().unique()[:5]
+        vals_str = ", ".join(str(v) for v in top_vals)
+        return f"{col} — {n_unique} categories ({vals_str}{', ...' if n_unique > 5 else ''})"
+
+    return f"{col} — {n_unique} distinct numeric values"
+
+
+def _candidate_columns(df, role, exclude=None):
+    """
+    Filters a dataset's columns down to the ones that are statistically
+    plausible for a given role.
+
+    - group: low-cardinality (2-10 unique values), not a pure identifier
+    - y_true / y_pred: genuinely binary, strict {0,1} only (via the
+      existing _is_binary_column helper)
+    - y_prob: continuous float column in the 0-1 range. Deliberately does
+      NOT apply the identifier-exclusion check -- a real probability
+      column naturally has every value unique.
+    """
+    exclude = exclude or set()
+    candidates = []
+    for col in df.columns:
+        if col in exclude:
+            continue
+        series = df[col]
+        n_unique = series.nunique()
+        n_total = len(series)
+        is_identifier = (n_unique == n_total)
+
+        if role == 'group':
+            if is_identifier:
+                continue
+            if 1 < n_unique <= 20:
+                candidates.append(col)
+
+        elif role in ('y_true', 'y_pred'):
+            if is_identifier:
+                continue
+            if series.dtype in ['int64', 'float64', 'bool'] and _is_binary_column(series):
+                candidates.append(col)
+
+        elif role == 'y_prob':
+            if series.dtype in ['float64', 'float32'] and n_unique > 2:
+                try:
+                    if series.dropna().between(0, 1).all():
+                        candidates.append(col)
+                except Exception:
+                    continue
+
+    return candidates
+
+
+def build_column_options(df, suggested_mappings):
+    """
+    Assembles the four per-role candidate lists for the confirmation
+    page, each excluding whatever's already suggested for a different
+    role, with a plain-language description attached to every option.
+
+    Returns: {role: [{"column": name, "description": str, "selected": bool}, ...]}
+    """
+    roles = ['group', 'y_true', 'y_pred', 'y_prob']
+    options = {}
+
+    for role in roles:
+        already_used_elsewhere = {
+            v for r, v in suggested_mappings.items()
+            if r in roles and r != role and v
+        }
+        candidates = _candidate_columns(df, role, exclude=already_used_elsewhere)
+
+        suggested = suggested_mappings.get(role)
+        if suggested and suggested not in candidates and suggested in df.columns:
+            candidates = [suggested] + candidates
+
+        options[role] = [
+            {
+                "column": col,
+                "description": _describe_column(df, col, role=role),
+                "selected": (col == suggested),
+            }
+            for col in candidates
+        ]
+
+    return options
 
 # ------------------------------------------------
 # Education-Specific Human Summary
@@ -397,9 +551,10 @@ def start_education_audit_process():
     user_selected_target = request.form.get('target_column', '').strip()
     if not user_selected_target:
         user_selected_target = request.form.get('target_column_fallback', '').strip()
+    user_selected_group = request.form.get('group_column', '').strip()
     test_type = request.form.get('test_type', 'pre_implementation')
     
-    print(f"📋 Education Audit Parameters: user_target={user_selected_target}, test_type={test_type}")
+    print(f"📋 Education Audit Parameters: user_target={user_selected_target}, user_group={user_selected_group}, test_type={test_type}")
 
     # Save uploaded file
     dataset_path = os.path.join(UPLOAD_FOLDER, file.filename)
@@ -415,8 +570,18 @@ def start_education_audit_process():
         
         # UNIFIED EDUCATION AUTO-DETECTION with FDK integration
         suggested_mappings, column_reasoning, intelligent_suggestion = detect_education_column_mappings(
-            df, columns, test_type=test_type, user_target=user_selected_target
+            df, columns, test_type=test_type, user_target=user_selected_target, user_group=user_selected_group
         )
+
+        # Sanitization: null out any suggested mapping that isn't actually in
+        # its own role's valid-candidate list, rather than trusting the
+        # detection heuristics blindly. Same fix pattern as every other FDK
+        # domain in this project.
+        for role in ['group', 'y_true', 'y_pred', 'y_prob']:
+            candidate_list = _candidate_columns(df, role)
+            if suggested_mappings.get(role) and suggested_mappings[role] not in candidate_list:
+                print(f"⚠️ Sanitizing invalid '{role}' suggestion: {suggested_mappings[role]} is not a valid candidate for this role")
+                suggested_mappings[role] = None
         
         required_mappings = ['group', 'y_true', 'y_pred']
         missing_required = [m for m in required_mappings if m not in suggested_mappings or not suggested_mappings[m]]
@@ -436,12 +601,17 @@ def start_education_audit_process():
         session['intelligent_suggestion'] = intelligent_suggestion
         
         # Count actual key features detected
-        detected_key_features = len([m for m in suggested_mappings.values() if m is not None])
+        detected_key_features = len([k for k in ('group', 'y_true', 'y_pred', 'y_prob') if suggested_mappings.get(k) is not None])
+
+        # Build the filtered, role-appropriate dropdown options for the
+        # confirmation page's manual-override UX.
+        column_options = build_column_options(df, suggested_mappings)
         
         return render_template(
             'auto_confirm_education.html',
             suggested_mappings=suggested_mappings,
             column_reasoning=column_reasoning,
+            column_options=column_options,
             total_columns=len(columns),
             detected_key_features=detected_key_features,
             filename=file.filename,
@@ -465,6 +635,24 @@ def run_education_audit_with_mapping():
     
     try:
         df = pd.read_csv(dataset_path)
+
+        # Apply any manual overrides submitted from the confirmation page's
+        # dropdowns. Each override is re-validated against its role's own
+        # candidate list before being accepted.
+        override_params = {
+            'group': request.args.get('group_col'),
+            'y_true': request.args.get('y_true_col'),
+            'y_pred': request.args.get('y_pred_col'),
+            'y_prob': request.args.get('y_prob_col'),
+        }
+        for role, override_value in override_params.items():
+            if not override_value:
+                continue
+            valid_candidates = _candidate_columns(df, role)
+            if override_value in valid_candidates:
+                column_mapping[role] = override_value
+            else:
+                print(f"⚠️ Ignoring invalid '{role}' override from request: {override_value}")
         
         required_mappings = ['group', 'y_true', 'y_pred']
         missing_required = [m for m in required_mappings if m not in column_mapping or not column_mapping[m]]
@@ -547,7 +735,7 @@ def run_education_audit_with_mapping():
         return render_template(
             "result_education.html",
             title="Education Fairness Audit Completed",
-            message="Your education dataset was audited successfully using 15 fairness metrics.",
+            message="Your education dataset was audited successfully using 26 fairness metrics.",
             summary=summary_text,
             report_filename=session['report_filename']
         )
