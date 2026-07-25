@@ -512,7 +512,7 @@
                     <div>Key Features Selected</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">56</div>
+                    <div class="stat-number">60</div>
                     <div>Business Metrics</div>
                 </div>
             </div>
@@ -569,14 +569,13 @@
 
             <div class="run-audit-section">
                 <h2><i class="fas fa-rocket"></i> Run Customer Equity Audit on {{ filename }}</h2>
-                <p>56 business fairness metrics will be analyzed using the column mapping selected above</p>
+                <p>60 business fairness metrics will be analyzed using the column mapping selected above</p>
                 <p><em>Business Services Coverage • Customer Equity Compliance • Automated Detection</em></p>
                 {% if not column_options.y_true or not column_options.y_pred %}
                 <p style="color:#b45309;"><i class="fas fa-triangle-exclamation"></i> This dataset doesn't yet have a binary outcome and/or prediction column, so the audit can't run until one is added.</p>
                 {% endif %}
 
                 <form action="{{ url_for('business.run_business_audit_with_mapping') }}" method="get" id="businessAuditRunForm">
-                    <input type="hidden" name="filename" value="{{ filename }}">
                     <button type="submit" class="run-btn" {% if not column_options.y_true or not column_options.y_pred %}disabled{% endif %}>
                         <i class="fas fa-play-circle"></i> RUN CUSTOMER EQUITY AUDIT
                     </button>
