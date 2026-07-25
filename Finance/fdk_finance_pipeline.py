@@ -1,6 +1,6 @@
 # ================================================================
 # FDK Finance Pipeline - PRODUCTION READY
-# 30 Fairness Metrics
+# 31 Fairness Metrics
 # ================================================================
 
 import pandas as pd
@@ -13,13 +13,14 @@ import json
 import warnings
 warnings.filterwarnings('ignore')
 
-# Production configuration for 30 non-redundant metrics
+# Production configuration for 31 non-redundant metrics
 FINANCE_METRICS_CONFIG = {
     'core_group_fairness': [
         'statistical_parity_difference',
         'disparate_impact', 
-        'selection_rate',
-        'base_rate',
+        'selection_rates',
+        'base_rate_difference',
+        'base_rates',
         'predicted_positives_per_group',
         'predicted_negatives_per_group'
     ],
@@ -163,15 +164,22 @@ class FinanceFairnessPipeline:
                 except Exception:
                     calibration_gaps[group] = 0.0
             
-            # 6. Regression Parity
-            try:
-                y_true_vals = group_data['y_true'].values
-                y_pred_vals = group_data['y_pred'].values
-                
-                if len(np.unique(y_pred_vals)) > 2:  # Regression case
-                    mse_values[group] = float(mean_squared_error(y_true_vals, y_pred_vals))
-            except Exception:
-                mse_values[group] = 0.0
+            # 6. Regression Parity (repurposed: Finance's y_pred is always
+            # strictly binary {0,1} -- enforced by the independent
+            # last-line-of-defense check in calculate_finance_metrics -- so
+            # the original "if y_pred has >2 unique values" regression-case
+            # branch could never fire for any valid Finance dataset. This
+            # compares each group's Brier score (mean squared error between
+            # predicted probability and actual binary outcome) instead,
+            # which is the natural regression-style accuracy measure for
+            # probability estimates in a binary-outcome context.
+            if 'y_prob' in df.columns:
+                try:
+                    y_true_vals = group_data['y_true'].values
+                    y_prob_vals = group_data['y_prob'].values
+                    mse_values[group] = float(np.mean((y_prob_vals - y_true_vals) ** 2))
+                except Exception:
+                    mse_values[group] = 0.0
             
             # 7. Slice AUC with Confidence Intervals
             if 'y_prob' in df.columns:
@@ -443,19 +451,31 @@ class FinanceFairnessPipeline:
                 metrics['worst_group_loss'] = float(max(valid_losses))
         
         # 18. Composite Bias Score
-        key_metrics = [
-            all_metrics.get('statistical_parity_difference', 0.0),
-            all_metrics.get('fpr_difference', 0.0),
-            all_metrics.get('fnr_difference', 0.0),
-            all_metrics.get('fdr_difference', 0.0),
-            all_metrics.get('error_rate_difference', 0.0)
+        # Only average over metrics that were actually computed this run --
+        # a metric absent from all_metrics (e.g. fpr_difference when a group's
+        # confusion matrix had only one class) must NOT be conflated with a
+        # metric that was computed and genuinely came out at 0.0 (perfectly
+        # fair on that dimension). The old `.get(name, 0.0)` + `if metric > 0`
+        # filter treated both cases identically and silently dropped every
+        # perfectly-fair dimension from the average, inflating the composite
+        # score whenever any dimension was well-behaved.
+        key_metric_names = [
+            'statistical_parity_difference',
+            'fpr_difference',
+            'fnr_difference',
+            'fdr_difference',
+            'error_rate_difference'
         ]
         
         # Normalize and weight metrics (financial domain specific)
-        normalized_metrics = [min(metric, 1.0) for metric in key_metrics if metric > 0]
+        available_metrics = [
+            min(all_metrics[name], 1.0)
+            for name in key_metric_names
+            if name in all_metrics and all_metrics[name] is not None
+        ]
         
-        if normalized_metrics:
-            metrics['composite_bias_score'] = float(sum(normalized_metrics) / len(normalized_metrics))
+        if available_metrics:
+            metrics['composite_bias_score'] = float(sum(available_metrics) / len(available_metrics))
         else:
             metrics['composite_bias_score'] = 0.0
         
@@ -580,7 +600,7 @@ class FinanceFairnessPipeline:
         return 1.0
 
     def calculate_finance_metrics(self, df: pd.DataFrame, enforce_min_group_size: bool = True) -> Dict[str, Any]:
-        """Calculate all 30 finance fairness metrics"""
+        """Calculate all 31 finance fairness metrics"""
         metrics = {}
         
         # Data validation
@@ -592,6 +612,22 @@ class FinanceFairnessPipeline:
         groups = df['group'].unique()
         if len(groups) < 2:
             raise ValueError("Need at least 2 groups for fairness analysis")
+
+        # Binary-value validation for y_true/y_pred. Without this, a non-binary
+        # column (e.g. a count field with values like 1 or 2) can silently
+        # corrupt every confusion-matrix-style aggregate downstream --
+        # selection rates exceeding 1.0, negative "predicted negative" counts,
+        # etc. -- since .mean()/.sum() on such a column produce numbers that
+        # look plausible but are meaningless as rates or counts.
+        for col in ['y_true', 'y_pred']:
+            if df[col].dtype == 'object':
+                raise ValueError(f"{col} should be numeric but is object")
+            unique_vals = set(df[col].dropna().unique())
+            if not unique_vals.issubset({0, 1}):
+                raise ValueError(
+                    f"{col} must be binary (0/1) for fairness metrics to be meaningful, "
+                    f"but contains values: {sorted(unique_vals)}"
+                )
 
         # Minimum subgroup size check (consistent with other FDK domains).
         # Skipped for internal calls (e.g. per-time-window recursion inside
@@ -638,7 +674,7 @@ class FinanceFairnessPipeline:
             
             results = {
                 "domain": "finance",
-                "metrics_calculated": 30,
+                "metrics_calculated": len(finance_metrics.keys()),
                 "metric_categories": FINANCE_METRICS_CONFIG,
                 "fairness_metrics": finance_metrics,
                 "validation": {

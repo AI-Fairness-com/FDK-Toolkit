@@ -7,6 +7,7 @@
 # ================================================================
 
 import os
+import re
 import json
 import pandas as pd
 import numpy as np
@@ -113,7 +114,7 @@ def detect_finance_column_mappings(df, columns, test_type='pre_implementation', 
         
         # GROUP COLUMN: Detect customer/demographic groups for financial fairness
         if not suggestions['group']:
-            if col_data.dtype == 'object' or (col_data.nunique() <= 10 and col_data.nunique() > 1):
+            if 2 <= col_data.nunique() <= 20:
                 if any(keyword in col.lower() for keyword in finance_keywords['group']):
                     suggestions['group'] = col
                     reasoning[col] = "Customer/demographic groups for financial fairness analysis"
@@ -148,9 +149,18 @@ def detect_finance_column_mappings(df, columns, test_type='pre_implementation', 
 
         # TIMESTAMP: optional column enabling temporal fairness metrics
         if not suggestions['timestamp']:
-            if any(keyword in col.lower() for keyword in ['timestamp', 'date', 'decision_date', 'time', 'datetime']):
+            timestamp_keywords = ['timestamp', 'date', 'decision_date', 'time', 'datetime']
+            col_tokens = set(re.split(r'[^a-z0-9]+', col.lower()))
+            keyword_matched = any(set(kw.split('_')).issubset(col_tokens) for kw in timestamp_keywords)
+            if keyword_matched:
                 try:
-                    pd.to_datetime(df[col], errors='raise')
+                    parsed = pd.to_datetime(df[col], errors='raise')
+                    non_null = parsed.dropna()
+                    if non_null.empty or non_null.dt.year.min() < 1971:
+                        # Degenerate epoch-adjacent parse (e.g. a 0/1 column
+                        # silently parsed as 1970-epoch timestamps) -- not a
+                        # genuine date/time column.
+                        raise ValueError("degenerate epoch-adjacent parse")
                     suggestions['timestamp'] = col
                     reasoning[col] = "Detected as a parseable date/time column for temporal fairness metrics"
                     continue
@@ -167,7 +177,8 @@ def detect_finance_column_mappings(df, columns, test_type='pre_implementation', 
                 
     if not suggestions['y_true']:
         for col in columns:
-            if df[col].dtype in ['int64', 'float64'] and df[col].nunique() == 2:
+            if (df[col].dtype in ['int64', 'float64'] and df[col].nunique() == 2
+                    and set(df[col].dropna().unique()).issubset({0, 1})):
                 suggestions['y_true'] = col
                 reasoning[col] = "Suggested financial outcomes (binary)"
                 break
@@ -175,12 +186,100 @@ def detect_finance_column_mappings(df, columns, test_type='pre_implementation', 
     if not suggestions['y_pred']:
         for col in columns:
             if (col != suggestions['y_true'] and df[col].dtype in ['int64', 'float64'] 
-                and df[col].nunique() == 2):
+                and df[col].nunique() == 2
+                and set(df[col].dropna().unique()).issubset({0, 1})):
                 suggestions['y_pred'] = col
                 reasoning[col] = "Suggested financial predictions (binary)"
                 break
     
     return suggestions, reasoning, intelligent_suggestion
+
+# ================================================================
+# NO-CODE-FRIENDLY COLUMN DESCRIPTIONS AND CANDIDATE FILTERING
+# ================================================================
+# These exist so a user with no CS/data-science background can make an
+# informed manual choice instead of picking blindly from every column
+# in their file. Each dropdown only shows columns that are statistically
+# plausible for that role, and each option is labeled in plain language.
+
+def _describe_column(df, col, role=None):
+    """Plain-language, jargon-free description of a column for a dropdown option."""
+    series = df[col]
+    n_unique = series.nunique(dropna=True)
+    n_total = len(series)
+    if n_unique == n_total and role != 'y_prob':
+        return f"{col} — every value is different (likely an ID column, not usable here)"
+    if n_unique == n_total and role == 'y_prob':
+        return f"{col} — a decimal score, different for every row (this is expected for a real probability)"
+    if pd.api.types.is_numeric_dtype(series) and n_unique == 2 and set(series.dropna().unique()).issubset({0, 1}):
+        return f"{col} — a yes/no column (0 or 1)"
+    if series.dtype == 'object' or (1 < n_unique <= 20):
+        sample_vals = ', '.join(str(v) for v in series.dropna().unique()[:5])
+        more = ', ...' if n_unique > 5 else ''
+        return f"{col} — {n_unique} categories ({sample_vals}{more})"
+    if pd.api.types.is_numeric_dtype(series) and n_unique > 2:
+        try:
+            if series.dropna().between(0, 1).all():
+                return f"{col} — a decimal score between 0 and 1 (looks like a probability)"
+        except Exception:
+            pass
+        return f"{col} — a number (ranges from {series.min():.2g} to {series.max():.2g})"
+    return col
+
+def _candidate_columns(df, role):
+    """Only the columns that are statistically plausible for a given role --
+    filters out obvious mismatches (e.g. ID columns for group, continuous
+    measurements for a yes/no target) so the dropdown isn't every column
+    in the file.
+
+    Note: the "every value is unique" identifier check only applies to
+    group/y_true/y_pred, where an all-unique column really is an ID column
+    and never a valid category or binary outcome. It must NOT apply to
+    y_prob -- a genuine continuous probability score naturally has every
+    value distinct (that's what continuous data looks like), so excluding
+    all-unique columns there would wrongly exclude the one column most
+    likely to be a real probability score.
+    """
+    candidates = []
+    for col in df.columns:
+        series = df[col]
+        n_unique = series.nunique(dropna=True)
+        is_identifier_like = n_unique == len(series)
+
+        if role in ('y_true', 'y_pred'):
+            if is_identifier_like:
+                continue
+            if pd.api.types.is_numeric_dtype(series) and n_unique == 2 and set(series.dropna().unique()).issubset({0, 1}):
+                candidates.append(col)
+        elif role == 'group':
+            if is_identifier_like:
+                continue
+            if 2 <= n_unique <= 20:
+                candidates.append(col)
+        elif role == 'y_prob':
+            # Deliberately does not exclude on is_identifier_like.
+            if pd.api.types.is_numeric_dtype(series) and n_unique > 2:
+                try:
+                    if series.dropna().between(0, 1).all():
+                        candidates.append(col)
+                except Exception:
+                    pass
+    return candidates
+
+def build_column_options(df, suggested_mappings=None):
+    """Build the full { role: [(column, description), ...] } structure
+    the confirmation page's dropdowns are populated from."""
+    suggested_mappings = suggested_mappings or {}
+    all_options = {
+        role: _candidate_columns(df, role)
+        for role in ('group', 'y_true', 'y_pred', 'y_prob')
+    }
+    result = {}
+    for role in ('group', 'y_true', 'y_pred', 'y_prob'):
+        used_elsewhere = {v for k, v in suggested_mappings.items() if k != role and v}
+        filtered = [c for c in all_options[role] if c not in used_elsewhere]
+        result[role] = [(c, _describe_column(df, c, role=role)) for c in filtered]
+    return result
 
 # ================================================================
 # Finance Summary Generation (Preserves Regulatory Logic)
@@ -430,13 +529,35 @@ def start_finance_audit_process():
             df, columns, test_type, user_selected_target
         )
         
-        required_mappings = ['group', 'y_true', 'y_pred']
+        # Only group and y_true are strictly required to show the
+        # confirmation page. y_pred (and y_prob) may legitimately be
+        # unresolved here -- the confirmation page itself shows the user
+        # exactly what's missing and why, rather than bouncing them to a
+        # generic error before they ever see the mapping. The pipeline's
+        # own required_mappings check (in run_finance_audit_with_mapping)
+        # still blocks the actual audit from running with a missing y_pred.
+        required_mappings = ['group', 'y_true']
         missing_required = [m for m in required_mappings if m not in suggested_mappings or not suggested_mappings[m]]
         
         if missing_required:
             return render_template("result_finance.html", title="Auto-Detection Failed",
                                 message=f"Could not automatically detect: {missing_required}.", summary=None)
         
+        # Build filtered, plain-language candidate lists for the confirmation
+        # page's dropdowns -- lets a no-code user correct any mapping without
+        # needing to know what "binary" or "cardinality" mean.
+        column_options = build_column_options(df, suggested_mappings)
+
+        # Sanity-check every suggestion against its own candidate list. A
+        # suggestion that isn't actually a valid candidate for its role must
+        # never be stored or acted on -- this is what silently let a
+        # non-binary column (dependents_count) reach the pipeline as y_pred
+        # when the true fallback should have been "no valid column exists".
+        for role in ('group', 'y_true', 'y_pred', 'y_prob'):
+            valid_cols = {c for c, _ in column_options.get(role, [])}
+            if suggested_mappings.get(role) not in valid_cols:
+                suggested_mappings[role] = None
+
         # Store in session (Matches justice standard session keys)
         session.clear()
         session['dataset_path'] = dataset_path
@@ -448,12 +569,13 @@ def start_finance_audit_process():
         session['intelligent_suggestion'] = intelligent_suggestion
         
         # Count detected key features
-        detected_key_features = len([m for m in suggested_mappings.values() if m is not None])
+        detected_key_features = len([k for k in ('group', 'y_true', 'y_pred', 'y_prob') if suggested_mappings.get(k) is not None])
         
         return render_template(
             'auto_confirm_finance.html',
             suggested_mappings=suggested_mappings,
             column_reasoning=column_reasoning,
+            column_options=column_options,
             total_columns=len(columns),
             detected_key_features=detected_key_features,
             filename=file.filename,
@@ -470,12 +592,25 @@ def start_finance_audit_process():
 def run_finance_audit_with_mapping():
     """Execute finance fairness audit with unified metadata integration"""
     dataset_path = session.get('dataset_path')
-    column_mapping = session.get('column_mapping', {})
     test_type = session.get('test_type', 'pre_implementation')
     user_selected_target = session.get('user_selected_target', '')
     intelligent_suggestion = session.get('intelligent_suggestion', None)
+
+    # Read any corrections made on the confirmation page. These were
+    # previously submitted but never read here -- the route silently fell
+    # back to the original auto-detected mapping regardless of what the
+    # user selected on the confirmation screen. Session-stored mapping is
+    # kept only as a fallback for any field not present in the request.
+    session_mapping = session.get('column_mapping', {})
+    column_mapping = {
+        'group': request.args.get('group_col') or session_mapping.get('group'),
+        'y_true': request.args.get('y_true_col') or session_mapping.get('y_true'),
+        'y_pred': request.args.get('y_pred_col') or session_mapping.get('y_pred'),
+        'y_prob': request.args.get('y_prob_col') or session_mapping.get('y_prob'),
+        'timestamp': session_mapping.get('timestamp'),
+    }
     
-    if not dataset_path or not column_mapping:
+    if not dataset_path or not column_mapping.get('group'):
         return render_template("result_finance.html", title="Error", 
                               message="Missing dataset or column mapping.", summary=None)
     
@@ -572,7 +707,7 @@ def run_finance_audit_with_mapping():
         return render_template(
             "result_finance.html",
             title="Finance Fairness Audit Completed",
-            message=f"Your finance dataset was audited successfully using 30 fairness metrics. Test Type: {test_type.replace('_', ' ').title()}",
+            message=f"Your finance dataset was audited successfully using 31 fairness metrics. Test Type: {test_type.replace('_', ' ').title()}",
             summary=summary_text,
             report_filename=session['report_filename'],
             test_type=test_type,
