@@ -504,7 +504,7 @@
                     <div>Key Features Selected</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">34</div>
+                    <div class="stat-number">25</div>
                     <div>Hiring Metrics</div>
                 </div>
             </div>
@@ -574,14 +574,13 @@
 
             <div class="run-audit-section">
                 <h2><i class="fas fa-rocket"></i> Run Hiring Fairness Audit on {{ filename }}</h2>
-                <p>34 hiring fairness metrics will be analyzed using the column mapping selected above</p>
+                <p>25 hiring fairness metrics will be analyzed using the column mapping selected above</p>
                 <p><em>Hiring Domain Coverage • EEO Compliance • Automated Detection</em></p>
                 {% if not column_options.y_true or not column_options.y_pred %}
                 <p style="color:#b45309;"><i class="fas fa-triangle-exclamation"></i> This dataset doesn't yet have a binary outcome and/or prediction column, so the audit can't run until one is added.</p>
                 {% endif %}
 
-                <form action="{{ url_for('hiring.run_hiring_audit_with_mapping') }}" method="get" id="hiringAuditRunForm">
-                    <input type="hidden" name="filename" value="{{ filename }}">
+                <form action="{{ url_for('hiring.run_hiring_audit_with_mapping') }}" method="get" id="hiringAuditRunForm"><div class="footer-tile-title">25 Hiring Fairness Metrics</div>
                     <button type="submit" class="run-btn" {% if not column_options.y_true or not column_options.y_pred %}disabled{% endif %}>
                         <i class="fas fa-play-circle"></i> RUN HIRING FAIRNESS AUDIT
                     </button>
@@ -593,7 +592,7 @@
         <div class="footer-tiles">
             <div class="footer-tile">
                 <div class="footer-tile-icon" aria-hidden="true"><i class="fas fa-chart-line"></i></div>
-                <div class="footer-tile-title">34 Hiring Fairness Metrics</div>
+                <div class="footer-tile-title">25 Hiring Fairness Metrics</div>
                 <div class="footer-tile-text">Resume screening, interview selection, and hiring-decision disparities measured across candidate demographics, aligned with EEOC and employment-law standards.</div>
             </div>
             <div class="footer-tile">
