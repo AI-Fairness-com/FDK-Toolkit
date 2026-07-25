@@ -514,7 +514,6 @@
                 <p>We've made our best guess for each field below from <strong>{{ filename }}</strong>. If anything doesn't look right, just pick a different option from the list — you know your data better than we do.</p>
 
                 <form action="{{ url_for('finance.run_finance_audit_with_mapping') }}" method="get" id="mappingConfirmForm">
-                    <input type="hidden" name="filename" value="{{ filename }}">
 
                     <div class="mapping-item">
                         <label for="group_col"><strong>Customer / Applicant Group</strong> — the column that represents the group you want to check for fairness (e.g. race, gender, region)</label>
@@ -572,7 +571,7 @@
 
             <div class="run-audit-section">
                 <h2><i class="fas fa-rocket"></i> Run Finance Fairness Audit on {{ filename }}</h2>
-                <p>30 finance fairness metrics will be analyzed using the column mapping confirmed above</p>
+                <p>31 finance fairness metrics will be analyzed using the column mapping confirmed above</p>
                 <p><em>Finance Domain Coverage • Regulatory Compliance • Automated Detection</em></p>
                 <button type="submit" form="mappingConfirmForm" class="run-btn">
                     <i class="fas fa-play-circle"></i> RUN FINANCE FAIRNESS AUDIT
@@ -584,7 +583,7 @@
         <div class="footer-tiles">
             <div class="footer-tile">
                 <div class="footer-tile-icon" aria-hidden="true"><i class="fas fa-chart-line"></i></div>
-                <div class="footer-tile-title">30 Financial Fairness Metrics</div>
+                <div class="footer-tile-title">31 Financial Fairness Metrics</div>
                 <div class="footer-tile-text">Credit scoring, loan approval, and financial service access disparities measured across demographic groups, aligned with fair lending laws.</div>
             </div>
             <div class="footer-tile">
