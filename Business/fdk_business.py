@@ -14,12 +14,11 @@ from datetime import datetime, timedelta
 business_bp = Blueprint('business', __name__, template_folder='templates')
 
 # UNIFIED INTELLIGENT SYSTEM: FDK Import with fallback
-try:
-    from FDK import intelligent_target_selection
-    HAS_FDK_INTELLIGENT = True
-except ImportError:
-    HAS_FDK_INTELLIGENT = False
-    print(f"⚠️ FDK intelligent selection not available, using fallback detection")
+# No longer needs try/except -- intelligent_selection.py has no Flask
+# dependency and imports no domain blueprint, so there's no circular
+# import to guard against.
+from intelligent_selection import intelligent_target_selection
+HAS_FDK_INTELLIGENT = True
 
 def _is_binary_column(series):
     """True only if the column has exactly two unique values, both in {0, 1}."""
