@@ -19,14 +19,11 @@ from datetime import datetime
 # INTELLIGENT SELECTION IMPORT (UNIFIED SYSTEM WITH COMPARATIVE SUPPORT)
 # ================================================================
 
-try:
-    from FDK import intelligent_target_selection, register_comparative_study, get_comparative_target
-    HAS_FDK_INTELLIGENT = True
-    HAS_COMPARATIVE_SUPPORT = True
-except ImportError:
-    HAS_FDK_INTELLIGENT = False
-    HAS_COMPARATIVE_SUPPORT = False
-    print(f"⚠️ FDK intelligent selection not available, using fallback detection")
+# No longer needs try/except -- intelligent_selection.py has no Flask
+# dependency and imports no domain blueprint, so there's no circular
+# import to guard against.
+from intelligent_selection import intelligent_target_selection
+HAS_FDK_INTELLIGENT = True
 
 # ================================================================
 # Configuration
