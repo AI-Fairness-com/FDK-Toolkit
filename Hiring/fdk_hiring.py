@@ -22,8 +22,28 @@ from datetime import datetime
 # No longer needs try/except -- intelligent_selection.py has no Flask
 # dependency and imports no domain blueprint, so there's no circular
 # import to guard against.
+FIND (just these two lines):
 from intelligent_selection import intelligent_target_selection
 HAS_FDK_INTELLIGENT = True
+
+REPLACE WITH:
+from intelligent_selection import intelligent_target_selection
+HAS_FDK_INTELLIGENT = True
+
+# register_comparative_study/get_comparative_target are unrelated to
+# target selection and still come from FDK.py -- kept separate here.
+# Neither function is actually defined anywhere in FDK.py (confirmed by
+# search), so this will currently always land in the except branch --
+# that's a real, separate, pre-existing bug (Hiring's comparative-study
+# feature has likely never worked), not something this fix is meant to
+# solve. Keeping the try/except at least fails gracefully instead of
+# crashing with NameError, same as it did before.
+try:
+    from FDK import register_comparative_study, get_comparative_target
+    HAS_COMPARATIVE_SUPPORT = True
+except ImportError:
+    HAS_COMPARATIVE_SUPPORT = False
+    print(f"⚠️ FDK comparative-study support not available")
 
 # ================================================================
 # Configuration
