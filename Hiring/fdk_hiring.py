@@ -35,11 +35,15 @@ HAS_FDK_INTELLIGENT = True
 # solve. Keeping the try/except at least fails gracefully instead of
 # crashing with NameError, same as it did before.
 try:
-    from FDK import register_comparative_study, get_comparative_target
-    HAS_COMPARATIVE_SUPPORT = True
-except ImportError:
-    HAS_COMPARATIVE_SUPPORT = False
-    print(f"⚠️ FDK comparative-study support not available")
+# register_comparative_study/get_comparative_target don't exist anywhere
+# in FDK.py (confirmed by direct search) -- this import always failed,
+# and had the side effect of triggering a full, redundant FDK.py import
+# that could itself hit a genuine circular-import failure depending on
+# load order (confirmed reproducible: importing Hiring's blueprint
+# triggers FDK.py's own attempt to re-import Hiring while it's still
+# mid-load). Comparative-study support has likely never worked; this
+# just stops pretending an import might succeed when it provably can't.
+HAS_COMPARATIVE_SUPPORT = False
 
 # ================================================================
 # Configuration
