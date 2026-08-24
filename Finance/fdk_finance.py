@@ -18,12 +18,11 @@ from datetime import datetime
 # INTELLIGENT SELECTION IMPORT (UNIFIED SYSTEM)
 # ================================================================
 
-try:
-    from FDK import intelligent_target_selection
-    HAS_FDK_INTELLIGENT = True
-except ImportError:
-    HAS_FDK_INTELLIGENT = False
-    print(f"⚠️ FDK intelligent selection not available, using fallback detection")
+# No longer needs try/except -- intelligent_selection.py has no Flask
+# dependency and imports no domain blueprint, so there's no circular
+# import to guard against.
+from intelligent_selection import intelligent_target_selection
+HAS_FDK_INTELLIGENT = True
 
 # ================================================================
 # Configuration
