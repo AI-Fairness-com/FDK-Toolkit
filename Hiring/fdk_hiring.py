@@ -22,11 +22,7 @@ from datetime import datetime
 # No longer needs try/except -- intelligent_selection.py has no Flask
 # dependency and imports no domain blueprint, so there's no circular
 # import to guard against.
-FIND (just these two lines):
-from intelligent_selection import intelligent_target_selection
-HAS_FDK_INTELLIGENT = True
 
-REPLACE WITH:
 from intelligent_selection import intelligent_target_selection
 HAS_FDK_INTELLIGENT = True
 
