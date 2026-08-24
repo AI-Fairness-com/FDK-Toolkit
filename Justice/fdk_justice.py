@@ -29,12 +29,11 @@ os.makedirs(REPORT_FOLDER, exist_ok=True)
 # UNIFIED INTELLIGENT SYSTEM INTEGRATION
 # ================================================================
 
-try:
-    from FDK import intelligent_target_selection
-    HAS_FDK_INTELLIGENT = True
-except ImportError:
-    HAS_FDK_INTELLIGENT = False
-    print("⚠️ FDK intelligent selection not available, using fallback detection")
+# No longer needs try/except -- intelligent_selection.py has no Flask
+# dependency and imports no domain blueprint, so there's no circular
+# import to guard against.
+from intelligent_selection import intelligent_target_selection
+HAS_FDK_INTELLIGENT = True
 
 def detect_justice_column_mappings(df, columns, test_type='pre_implementation', user_target=None):
     """
