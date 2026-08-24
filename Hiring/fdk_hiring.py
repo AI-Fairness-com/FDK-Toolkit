@@ -34,7 +34,6 @@ HAS_FDK_INTELLIGENT = True
 # feature has likely never worked), not something this fix is meant to
 # solve. Keeping the try/except at least fails gracefully instead of
 # crashing with NameError, same as it did before.
-try:
 # register_comparative_study/get_comparative_target don't exist anywhere
 # in FDK.py (confirmed by direct search) -- this import always failed,
 # and had the side effect of triggering a full, redundant FDK.py import
