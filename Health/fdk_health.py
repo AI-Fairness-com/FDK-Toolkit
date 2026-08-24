@@ -65,16 +65,14 @@ def detect_health_column_mappings(df, columns, test_type='pre_implementation', u
     # STEP 1: INTELLIGENT TARGET SELECTION (using local import to avoid circular dependency)
     if test_type in ['pre_implementation', 'post_implementation']:
         try:
-            # Import locally to avoid circular imports
-            try:
-                from FDK import intelligent_target_selection
-                intelligent_suggestion = intelligent_target_selection(df, test_type, 'health')
-                if intelligent_suggestion and intelligent_suggestion in df.columns:
-                    suggestions['y_true'] = intelligent_suggestion
-                    reasoning[intelligent_suggestion] = f"✅ FDK INTELLIGENT SELECTION (test_type: {test_type})"
-                    print(f"🎯 FDK Intelligent suggests: {intelligent_suggestion} for {test_type}")
-            except ImportError:
-                print("⚠️ FDK intelligent selection not available")
+            # intelligent_selection.py has no circular-import risk, so
+            # this no longer needs to be lazy or wrapped in try/except.
+            from intelligent_selection import intelligent_target_selection
+            intelligent_suggestion = intelligent_target_selection(df, test_type, 'health')
+            if intelligent_suggestion and intelligent_suggestion in df.columns:
+                suggestions['y_true'] = intelligent_suggestion
+                reasoning[intelligent_suggestion] = f"✅ FDK INTELLIGENT SELECTION (test_type: {test_type})"
+                print(f"🎯 FDK Intelligent suggests: {intelligent_suggestion} for {test_type}")
         except Exception as e:
             print(f"⚠️ FDK intelligent selection failed: {e}")
     
