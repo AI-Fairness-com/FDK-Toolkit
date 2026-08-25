@@ -12,7 +12,7 @@ from flask import Blueprint, request, render_template, session, redirect, url_fo
 from datetime import datetime, timedelta
 
 # Import justice pipeline
-from .fdk_justice_pipeline import interpret_prompt, run_audit_from_request, run_pipeline
+from .fdk_justice_pipeline import interpret_prompt, run_audit_from_request, run_pipeline, JUSTICE_METRICS_CONFIG
 
 # ================================================================
 # FOLDER CONFIGURATION
@@ -652,7 +652,11 @@ def run_justice_audit_with_mapping():
             summary=summary_text,
             report_filename=session['report_filename'],
             test_type=test_type,
-            metadata=metadata
+            metadata=metadata,
+            # Computed from the real config length, not hardcoded, so this
+            # can't drift out of sync with the pipeline again the way the
+            # static "7" in the template did.
+            metric_category_count=len(JUSTICE_METRICS_CONFIG)
         )
         
     except Exception as e:
