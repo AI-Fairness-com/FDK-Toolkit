@@ -165,17 +165,28 @@ class GovernanceFairnessPipeline:
         """Identify critical fairness issues for governance context"""
         issues = []
         
-        # Core fairness thresholds
-        if metrics.get('statistical_parity_difference', 0) > 0.05:
+        # Core fairness thresholds. Each check reads the metric first and
+        # only evaluates the threshold if it was actually computed --
+        # baking a default into .get() silently treats "missing" as a real
+        # value, which is only harmless by accident when the default
+        # happens to sit on the safe side of that check's threshold.
+        # worst_case_subgroup_performance's old default of 0 sat BELOW its
+        # own failing threshold (< 0.7), so a missing value falsely
+        # triggered a critical issue that was never actually computed.
+        spd = metrics.get('statistical_parity_difference')
+        if spd is not None and spd > 0.05:
             issues.append("Significant selection rate disparities between constituent groups")
         
-        if metrics.get('disparate_impact_ratio', 1) < 0.8:
+        dir_ = metrics.get('disparate_impact_ratio')
+        if dir_ is not None and dir_ < 0.8:
             issues.append("Disparate impact detected in service opportunities")
         
-        if metrics.get('equal_opportunity_difference', 0) > 0.05:
+        eod = metrics.get('equal_opportunity_difference')
+        if eod is not None and eod > 0.05:
             issues.append("Unequal opportunity for qualified constituents across groups")
         
-        if metrics.get('worst_case_subgroup_performance', 0) < 0.7:
+        wcsp = metrics.get('worst_case_subgroup_performance')
+        if wcsp is not None and wcsp < 0.7:
             issues.append("Unacceptable performance gaps for disadvantaged constituent groups")
         
         return issues
